@@ -905,6 +905,118 @@ CATS.push({id:'kakuritsu2', grade:'中2', label:'確率', variants:[
       e:`1〜${n}のうち偶数は${evens}個、奇数は${odds}個。和が偶数になるのは同じ偶奇の2枚を選ぶとき：${C2(evens)}+${C2(odds)}=${ways}通り。全体は${tot}通りなので確率は${ways}/${tot}=${fracStr(ways,tot)}`};
   }
 ]});
+CATS.push({id:'tenkai', grade:'中3', label:'展開（乗法公式・発展）', variants:[
+  ()=>{ const a=randNZ(-9,9), b=randNZ(-9,9);
+    const xTermStr = (a+b)===0 ? '' : `${pm(a+b)}x`;
+    return {q:`(x ${pm(a)})(x ${pm(b)}) を展開しなさい。`, a:buildPoly([[1,'x²'],[a+b,'x'],[a*b,'']]),
+      e:`x²+(a+b)x+ab の公式に a=${a}, b=${b} を代入すると x²${xTermStr}${pm(a*b)}`}; },
+  ()=>{ const a=randNZ(1,9); return {q:`(x + ${a})² を展開しなさい。`, a:buildPoly([[1,'x²'],[2*a,'x'],[a*a,'']]), e:`(x+a)²=x²+2ax+a²`}; },
+  ()=>{ const a=randNZ(1,9); return {q:`(x − ${a})² を展開しなさい。`, a:buildPoly([[1,'x²'],[-2*a,'x'],[a*a,'']]), e:`(x−a)²=x²−2ax+a²`}; },
+  ()=>{ const p=randInt(2,5), qc=randNZ(-9,9), r=randInt(2,5), s=randNZ(-9,9);
+    return {q:`(${p}x ${pm(qc)})(${r}x ${pm(s)}) を展開しなさい。`,
+      a:buildPoly([[p*r,'x²'],[p*s+qc*r,'x'],[qc*s,'']]),
+      e:`(px+q)(rx+s)=prx²+(ps+qr)x+qs の形で展開する`}; },
+  {w:0.4, fn:()=>{ // 難関：(ax+by+c)² の展開（置き換えテクニック）
+    const a=randNZ(-4,4), b=randNZ(-4,4), c=randNZ(-6,6);
+    const expr=buildPoly([[a,'x'],[b,'y'],[c,'']]);
+    return {q:`(${expr})² を展開しなさい。`,
+      a:buildPoly([[a*a,'x²'],[b*b,'y²'],[2*a*b,'xy'],[2*a*c,'x'],[2*b*c,'y'],[c*c,'']]),
+      e:`(ax+by+c)²=a²x²+b²y²+c²+2abxy+2acx+2bcy の公式に a=${a}, b=${b}, c=${c} を代入する`};
+  }},
+  {w:0.4, fn:()=>{ // 難関：置き換えを使う展開 (x+y+p)(x+y+q)（置き換えテクニック）
+    const p=randNZ(-9,9), qc=randNZ(-9,9);
+    const sum=p+qc, prod=p*qc;
+    const midTerm = sum===0?'':` ${pm(sum)}M`;
+    const finalXY = sum===0?'':` ${pm(sum)}x ${pm(sum)}y`;
+    return {q:`(x + y ${pm(p)})(x + y ${pm(qc)}) を展開しなさい。`,
+      a:buildPoly([[1,'x²'],[2,'xy'],[1,'y²'],[sum,'x'],[sum,'y'],[prod,'']]),
+      e:`x+y=Mとおくと (M ${pm(p)})(M ${pm(qc)}) = M²${midTerm} ${pm(prod)}。Mをx+yに戻して (x+y)²${midTerm.replace(/M/g,'(x+y)')} ${pm(prod)} = x²+2xy+y²${finalXY} ${pm(prod)}`};
+  }}
+]});
+CATS.push({id:'inbunkai', grade:'中3', label:'因数分解（共通因数・発展）', variants:[
+  ()=>{ let g=randInt(2,6), p=randInt(1,6), qn=randInt(1,6);
+    while(gcd(p,qn)!==1){ p=randInt(1,6); qn=randInt(1,6); }
+    const c1=g*p, c2=g*qn;
+    return {q:`${c1}x² + ${c2}x を因数分解しなさい。`, a:`${g}x(${coefX(p)} + ${qn})`, e:`共通因数${g}xをくくり出す`}; },
+  ()=>{ const a=randNZ(-9,9), b=randNZ(-9,9); const sum=a+b, prod=a*b;
+    const xTerm = sum===0?'':(sum>=0?` + ${sum}x`:` − ${Math.abs(sum)}x`);
+    return {q:`次の式を因数分解しなさい。\nx²${xTerm} ${pm(prod)}`, a:`(x ${pm(a)})(x ${pm(b)})`,
+      e:`かけて${prod}、たして${sum}になる2数は${a}と${b}`}; },
+  ()=>{ let p=randInt(2,5), qc=randNZ(-9,9), r=randInt(2,5), s=randNZ(-9,9);
+    let x2=p*r, x1=p*s+qc*r, x0=qc*s;
+    let tries=0;
+    while(gcd(gcd(x2,x1),x0)!==1 && tries<20){ p=randInt(2,5); qc=randNZ(-9,9); r=randInt(2,5); s=randNZ(-9,9);
+      x2=p*r; x1=p*s+qc*r; x0=qc*s; tries++; }
+    const xTerm = x1===0?'':(x1>=0?` + ${x1}x`:` − ${Math.abs(x1)}x`);
+    return {q:`次の式を因数分解しなさい。\n${x2}x²${xTerm} ${pm(x0)}`, a:`(${p}x ${pm(qc)})(${r}x ${pm(s)})`,
+      e:`たすき掛けで (px+q)(rx+s) の形を探す`}; },
+  ()=>{ // 応用：因数分解を利用したくふう計算
+    const R=choice([20,30,50,100,1000]); const a=randInt(1,9); const x=R-a;
+    return {q:`x=${x} のとき、x² + ${2*a}x + ${a*a} の値を、くふうして求めなさい。`,
+      a:`${R*R}`,
+      e:`x²+${2*a}x+${a*a}=(x+${a})² と因数分解できる。x+${a}=${R} なので (x+${a})²=${R}²=${R*R}`};
+  },
+  ()=>{ // 難関：グルーピングによる4項の因数分解 xy+qx+py+pq
+    const p=randInt(2,9), q=randInt(2,9);
+    const pq=p*q;
+    return {q:`xy + ${q}x + ${p}y + ${pq} を因数分解しなさい。`,
+      a:`(x + ${p})(y + ${q})`,
+      e:`xy+${q}xをxでくくり x(y+${q})。${p}y+${pq}を${p}でくくり ${p}(y+${q})。共通因数(y+${q})でくくると (x+${p})(y+${q})`};
+  },
+  ()=>{ // 難関：置き換えを使う因数分解 x²+2xy+y²-c²
+    const c=randInt(2,9), c2=c*c;
+    return {q:`x² + 2xy + y² − ${c2} を因数分解しなさい。`,
+      a:`(x + y + ${c})(x + y − ${c})`,
+      e:`x²+2xy+y²=(x+y)² なので (x+y)²−${c}² の差の平方の形。(x+y+${c})(x+y−${c})`};
+  }
+]});
+CATS.push({id:'heihoukon', grade:'中3', label:'平方根の計算（発展）', variants:[
+  ()=>{ const r=choice([2,3,5,6,7]); const c1=randInt(1,6), c2=randInt(1,6); const op=choice(['+','−']);
+    const ans= op==='+'?c1+c2:c1-c2;
+    const t1=c1===1?`√${r}`:`${c1}√${r}`, t2=c2===1?`√${r}`:`${c2}√${r}`;
+    const ansStr=ans===0?'0':(Math.abs(ans)===1?`${ans<0?'−':''}√${r}`:`${ans}√${r}`);
+    return {q:`${t1} ${op} ${t2} を計算しなさい。`, a:ansStr, e:`√の中が同じなので係数だけ計算：${c1}${op}${c2}=${ans}`}; },
+  ()=>{ const r=choice([2,3,5]); const k1=randInt(2,4), k2=randInt(2,4); const n1=r*k1*k1, n2=r*k2*k2;
+    return {q:`√${n1} + √${n2} を計算しなさい。`, a:`${k1+k2}√${r}`,
+      e:`√${n1}=${k1}√${r}、√${n2}=${k2}√${r} なので ${k1}√${r}+${k2}√${r}=${k1+k2}√${r}`}; },
+  ()=>{ const op=choice(['×','÷']);
+    if(op==='×'){ const a=randInt(2,12), b=randInt(2,12); const prod=a*b; const [oc,ins]=simplifySqrt(prod);
+      const ansStr= ins===1?`${oc}`:(oc===1?`√${ins}`:`${oc}√${ins}`);
+      return {q:`√${a} × √${b} を計算しなさい。`, a:ansStr, e:`√${a}×√${b}=√${prod}${ins!==prod?` = ${ansStr}`:''}`};
+    } else { const b=randInt(2,6), k=randInt(2,5), a=b*k*k;
+      return {q:`√${a} ÷ √${b} を計算しなさい。`, a:`${k}`, e:`√${a}÷√${b}=√(${a}÷${b})=√${k*k}=${k}`}; }
+  },
+  ()=>{ const n=choice([12,18,20,27,28,32,45,48,50,72,75,98,108,150,162]); const [oc,ins]=simplifySqrt(n);
+    return {q:`√${n} を根号の中ができるだけ小さい自然数になるように簡単にしなさい。`,
+      a: ins===1?`${oc}`:`${oc}√${ins}`, e:`${n}=${oc*oc}×${ins} と分解できるので √${n}=${oc}√${ins}`}; },
+  ()=>{ const a=randInt(2,6), b=randInt(2,10), c=randInt(2,10);
+    const [c1,i1]=simplifySqrt(a*b), [c2,i2]=simplifySqrt(a*c);
+    return {q:`√${a} × (√${b} + √${c}) を計算しなさい。`, a:`${sqrtTerm(c1,i1)} + ${sqrtTerm(c2,i2)}`,
+      e:`分配法則で √${a}×√${b} と √${a}×√${c} に分けてそれぞれ計算する`}; },
+  ()=>{ const a=randInt(1,9), b=choice([2,3,5,6,7]); const g=gcd(a,b); const numer=a/g, denom=b/g;
+    const ansStr= denom===1? `${numer}√${b}` : `${numer}√${b}/${denom}`;
+    return {q:`${a} ÷ √${b} の分母を有理化して答えなさい。`, a:ansStr,
+      e:`分母・分子に√${b}をかけて ${a}√${b}/${b}${g>1?`（約分して ${ansStr}）`:''}`}; },
+  ()=>{ // 難関：共役を使った分母の有理化
+    const sqfree=[2,3,5,6,7,10,11,13,14,15,17,19];
+    let a=choice(sqfree), b=choice(sqfree);
+    while(a===b){ b=choice(sqfree); }
+    if(a<b){ [a,b]=[b,a]; }
+    const denom=a-b;
+    const ansStr = denom===1? `√${a} − √${b}` : `(√${a} − √${b})/${denom}`;
+    return {q:`1 / (√${a} + √${b}) の分母を有理化しなさい。`, a:ansStr,
+      e:`分母の共役 √${a}−√${b} を分子・分母にかける：(√${a}−√${b}) / {(√${a}+√${b})(√${a}−√${b})} = (√${a}−√${b}) / (${a}−${b}) = ${ansStr}`};
+  },
+  ()=>{ // 難関：(√a+√b)² の展開
+    const sqfree=[2,3,5,6,7,10,11,13,14,15,17,19];
+    const a=choice(sqfree); let b=choice(sqfree); while(b===a){ b=choice(sqfree); }
+    const inner=a*b; const [oc,ins]=simplifySqrt(inner);
+    const resultConst=a+b, coeff2=2*oc;
+    const ansStr = ins===1? `${resultConst+coeff2}` : `${resultConst} + ${coeff2}√${ins}`;
+    return {q:`(√${a} + √${b})² を展開しなさい。`, a:ansStr,
+      e:`(√a+√b)²=a+b+2√(ab) の公式より ${a}+${b}+2√(${a}×${b}) = ${resultConst}+2√${inner}${ins!==inner?` = ${ansStr}`:''}`};
+  }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
