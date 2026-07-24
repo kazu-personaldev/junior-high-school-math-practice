@@ -631,6 +631,61 @@ CATS.push({id:'ichiji1_bunsu', grade:'中1', label:'一次方程式（分数を�
       e:`両辺に${d1}×${d2}=${d1*d2}をかけて分母を払うと ${d2}x − ${d1}x = ${k*d1*d2} → (${d2}−${d1})x=${k*d1*d2} → x=${xTrue}`};
   }
 ]});
+CATS.push({id:'hirei', grade:'中1', label:'比例・反比例・比例式', variants:[
+  ()=>{ // 比例
+    const a=randNZ(-9,9), x1=randNZ(-9,9), x2=randNZ(-9,9);
+    const y1=a*x1, y2=a*x2;
+    return {q:`yはxに比例し、x=${x1}のときy=${y1}である。x=${x2}のときのyの値を求めなさい。`, a:`y=${y2}`,
+      e:`比例定数 a = y÷x = ${y1}÷${x1} = ${a}。y=${a}×${x2} = ${y2}`};
+  },
+  ()=>{ // 反比例
+    const x1=randNZ(2,9), y1=randNZ(2,9), a=x1*y1;
+    const divs=[]; for(let d=2;d<=Math.abs(a);d++){ if(a%d===0 && d!==Math.abs(x1)) divs.push(d); }
+    const x2=divs.length? choice(divs)*(Math.random()<0.5?-1:1) : x1*2;
+    const y2=a/x2;
+    return {q:`yはxに反比例し、x=${x1}のときy=${y1}である。x=${x2}のときのyの値を求めなさい。`, a:`y=${y2}`,
+      e:`比例定数 a = xy = ${x1}×${y1} = ${a}。y = ${a}÷${x2} = ${y2}`};
+  },
+  ()=>{ const k=randInt(2,9); let a=randInt(2,9); while(a===k){ a=randInt(2,9); }
+    const x=randNZ(-9,9), b=a*x;
+    return {q:`次の比例式を解きなさい。\n${a} : ${k} = ${b} : x`, a:`x = ${k*x}`,
+      e:`内側の積＝外側の積：${a}×x = ${k}×${b} → ${a}x = ${k*b} → x = ${k*x}`};
+  },
+  ()=>{ // 難関：歯車の回転数（反比例の応用）
+    const [a,b]=choice([[2,3],[3,4],[2,5],[3,5],[4,5],[3,7],[5,6]]);
+    const kk=randInt(2,8), nA=b*kk, nB=a*kk;
+    return {q:`半径の比が${a}:${b}の2つの歯車A、Bがかみ合っている。Aの歯車が${nA}回転する間に、Bの歯車は何回転するか求めなさい。`,
+      a:`${nB}回転`,
+      e:`かみ合う歯車は「半径×回転数」が等しくなる：${a}×${nA}=${b}×n → n=${a}×${nA}÷${b}=${nB}`};
+  }
+]});
+CATS.push({id:'ougi', grade:'中1', label:'円・おうぎ形の面積と弧の長さ', variants:[
+  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の面積を求めなさい。`, a:`${r*r}π cm²`, e:`面積=πr²=π×${r}²=${r*r}π cm²`}; },
+  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の周の長さを求めなさい。`, a:`${2*r}π cm`, e:`周の長さ=2πr=2π×${r}=${2*r}π cm`}; },
+  ()=>{
+    const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
+    return {q:`半径${r}cm、中心角${th}°のおうぎ形の弧の長さを求めなさい。`, a:`${fracStr(2*r*th,360)}π cm`,
+      e:`弧の長さ=2πr×(中心角/360)=2π×${r}×${th}/360 = ${fracStr(2*r*th,360)}π cm`};
+  },
+  ()=>{
+    const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
+    return {q:`半径${r}cm、中心角${th}°のおうぎ形の面積を求めなさい。`, a:`${fracStr(r*r*th,360)}π cm²`,
+      e:`面積=πr²×(中心角/360)=π×${r}²×${th}/360 = ${fracStr(r*r*th,360)}π cm²`};
+  },
+  ()=>{ // 応用：同心の2つのおうぎ形にはさまれた部分の面積
+    const th=choice([30,45,60,90,120,150,180]);
+    const r=randInt(2,7), R=r+randInt(2,6);
+    return {q:`中心角が共通で${th}°、半径が${R}cmと${r}cm(${R}cm > ${r}cm)の2つのおうぎ形がある。この2つの弧の間にはさまれた部分の面積を求めなさい。`,
+      a:`${fracStr((R*R-r*r)*th,360)}π cm²`,
+      e:`大きいおうぎ形−小さいおうぎ形＝π×(${R}²−${r}²)×${th}/360 = ${fracStr((R*R-r*r)*th,360)}π cm²`};
+  },
+  ()=>{ // 難関：半円と正方形を組み合わせた複合図形の周の長さ
+    const r=randInt(2,9); const side=2*r;
+    return {q:`半径${r}cmの半円と、その直径を1辺とする正方形を組み合わせた図形がある(半円は正方形の外側にある)。この図形のまわりの長さを求めなさい。`,
+      a:`(${3*side} + ${r}π) cm`,
+      e:`正方形の3辺分（直径の辺は内側になるため除く）＝${side}×3=${3*side}cm。半円の弧＝πr=${r}πcm。まわりの長さ＝${3*side}+${r}πcm`};
+  }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
