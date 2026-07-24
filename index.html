@@ -861,6 +861,50 @@ CATS.push({id:'ichijikan', grade:'中2', label:'一次関数（式・変域）',
       svg:makeGraph(xInt-3,xInt+3,yInt-4,yInt+4,{lines:[{slope:a1,intercept:b1},{slope:a2,intercept:b2}],points:[{x:xInt,y:yInt,label:'交点'}]})};
   }
 ]});
+CATS.push({id:'kakudo2', grade:'中2', label:'角度（多角形・平行線・外角）', variants:[
+  ()=>{ const n=choice([5,6,7,8,9]); return {q:`${n}角形の内角の和を求めなさい。`, a:`${(n-2)*180}°`, e:`内角の和=180×(n−2)=180×${n-2}=${(n-2)*180}°`}; },
+  ()=>{ const n=choice([5,6,8,9,10,12]); return {q:`正${n}角形の1つの内角の大きさを求めなさい。`, a:`${(n-2)*180/n}°`, e:`1つの内角=180×(${n}−2)÷${n}=${(n-2)*180/n}°`}; },
+  ()=>{ const a=randInt(20,85), b=randInt(20,85);
+    return {q:`三角形の2つの内角がそれぞれ${a}°、${b}°であるとき、この2つに隣り合わない外角の大きさを求めなさい。`,
+      a:`${a+b}°`, e:`三角形の外角は、隣り合わない2つの内角の和に等しいので ${a}+${b}=${a+b}°`,
+      svg:drawExteriorAngleTriangle(a,b)}; },
+  ()=>{ const ang=randInt(20,160), type=choice(['錯角','同位角']);
+    return {q:`右の図のように2直線ℓ、mが平行であるとき、印をつけた角が${ang}°であるとき、その${type}の大きさを求めなさい。`,
+      a:`${ang}°`, e:`平行線の${type}は等しいから ${ang}°`,
+      svg:drawParallelLines(ang,type)}; },
+  ()=>{ // 難関：補助線を使う折れ線の角度
+    const a=randInt(20,90), b=randInt(20,90);
+    return {q:`2直線ℓ、mは平行である。ℓ上の点Aとm上の点Bを、途中で折れ曲がる点Cで結んだ折れ線ACBがある。∠A=${a}°、∠B=${b}°のとき、Cを通りℓ,mに平行な補助線を利用して∠ACBの大きさを求めなさい。`,
+      a:`${a+b}°`,
+      e:`点Cを通り、ℓ,mに平行な補助線を引くと、錯角の関係により∠ACBはちょうど∠Aと∠Bに分かれる。よって ∠ACB=∠A+∠B=${a}+${b}=${a+b}°`};
+  }
+]});
+CATS.push({id:'kakuritsu2', grade:'中2', label:'確率', variants:[
+  ()=>{ const k=randInt(2,12); let count=0;
+    for(let i=1;i<=6;i++) for(let j=1;j<=6;j++) if(i+j===k) count++;
+    return {q:`大小2つのさいころを同時に投げるとき、出た目の和が${k}になる確率を求めなさい。`, a:`${fracStr(count,36)}`,
+      e:`和が${k}になる組は${count}通り。全部で36通りなので確率は${count}/36=${fracStr(count,36)}`}; },
+  ()=>{ const rd=randInt(2,5), wh=randInt(2,5), total=rd+wh;
+    const totalWays=total*(total-1)/2, redWays=rd*(rd-1)/2;
+    return {q:`赤玉${rd}個、白玉${wh}個が入った袋から同時に2個取り出すとき、2個とも赤玉である確率を求めなさい。`,
+      a:`${fracStr(redWays,totalWays)}`, e:`全部の取り出し方は${totalWays}通り、2個とも赤は${redWays}通り。確率=${redWays}/${totalWays}=${fracStr(redWays,totalWays)}`}; },
+  ()=>{ // 難関：3枚の硬貨の確率
+    const k=randInt(0,3);
+    const C3=[1,3,3,1];
+    return {q:`3枚の硬貨を同時に投げるとき、ちょうど${k}枚が表になる確率を求めなさい。`,
+      a:`${fracStr(C3[k],8)}`,
+      e:`3枚の硬貨の出方は全部で2³=8通り。ちょうど${k}枚表になる場合の数は${C3[k]}通り。確率=${C3[k]}/8=${fracStr(C3[k],8)}`};
+  },
+  ()=>{ // 応用：カードの和が偶数になる確率
+    const n=randInt(6,10);
+    const evens=Math.floor(n/2), odds=n-evens;
+    const C2=x=>x*(x-1)/2;
+    const ways=C2(evens)+C2(odds), tot=C2(n);
+    return {q:`1から${n}までの数字が1つずつ書かれた${n}枚のカードから同時に2枚取り出すとき、書かれた数の和が偶数になる確率を求めなさい。`,
+      a:`${fracStr(ways,tot)}`,
+      e:`1〜${n}のうち偶数は${evens}個、奇数は${odds}個。和が偶数になるのは同じ偶奇の2枚を選ぶとき：${C2(evens)}+${C2(odds)}=${ways}通り。全体は${tot}通りなので確率は${ways}/${tot}=${fracStr(ways,tot)}`};
+  }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
