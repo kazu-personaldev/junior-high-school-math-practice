@@ -483,7 +483,6 @@ function makeGraph(xmin,xmax,ymin,ymax,opts){
    Every variant fn returns {q,a,e}
 */
 const CATS = [];
-
 CATS.push({id:'seisu', grade:'中1', label:'正負の数の計算（難関レベル）', variants:[
   ()=>{ // 4段階の複合演算（累乗＋かっこ×2＋四則）
     const e=randInt(2,6), k=randInt(-6,6), d=e*k;
@@ -684,6 +683,71 @@ CATS.push({id:'ougi', grade:'中1', label:'円・おうぎ形の面積と弧の�
     return {q:`半径${r}cmの半円と、その直径を1辺とする正方形を組み合わせた図形がある(半円は正方形の外側にある)。この図形のまわりの長さを求めなさい。`,
       a:`(${3*side} + ${r}π) cm`,
       e:`正方形の3辺分（直径の辺は内側になるため除く）＝${side}×3=${3*side}cm。半円の弧＝πr=${r}πcm。まわりの長さ＝${3*side}+${r}πcm`};
+  }
+]});
+CATS.push({id:'kuukan', grade:'中1', label:'空間図形（角柱・円柱・球の体積と表面積）', variants:[
+  ()=>{ const w=randInt(2,9), l=randInt(2,9), h=randInt(2,9);
+    return {q:`底面が縦${w}cm、横${l}cmの長方形で、高さ${h}cmの四角柱の体積を求めなさい。`, a:`${w*l*h} cm³`,
+      e:`体積=底面積×高さ=(${w}×${l})×${h}=${w*l*h} cm³`}; },
+  ()=>{ const r=randInt(2,8), h=randInt(2,9);
+    const s=2*r*r+2*r*h;
+    return {q:`底面の半径${r}cm、高さ${h}cmの円柱の表面積を求めなさい。`, a:`${s}π cm²`,
+      e:`表面積=2πr²+2πrh=2π×${r}²+2π×${r}×${h}=${2*r*r}π+${2*r*h}π=${s}π cm²`}; },
+  ()=>{ const r=choice([3,6,9]);
+    return {q:`半径${r}cmの球の体積を求めなさい。`, a:`${4*r*r*r/3}π cm³`,
+      e:`体積=(4/3)πr³=(4/3)π×${r}³=${4*r*r*r/3}π cm³`}; },
+  ()=>{ const r=choice([2,3,4,5,6,7]);
+    return {q:`半径${r}cmの球の表面積を求めなさい。`, a:`${4*r*r}π cm²`, e:`表面積=4πr²=4π×${r}²=${4*r*r}π cm²`}; },
+  ()=>{ // 応用：直方体から円柱をくりぬいた体積
+    const a=randInt(4,9), h=randInt(3,8), r=randInt(1,Math.max(1,Math.floor(a/2)));
+    return {q:`底面が1辺${a}cmの正方形で高さ${h}cmの直方体から、底面の半径${r}cm、高さ${h}cmの円柱をくりぬいた。残りの立体の体積を求めなさい。`,
+      a:`(${a*a*h} − ${r*r*h}π) cm³`,
+      e:`直方体の体積=${a}×${a}×${h}=${a*a*h}cm³。円柱の体積=π×${r}²×${h}=${r*r*h}π cm³。差は (${a*a*h} − ${r*r*h}π) cm³`};
+  },
+  ()=>{ // 難関：水そうの水位変化（文章題）
+    const a=randInt(3,8), h1=randInt(2,10), deltaH=randInt(2,9);
+    const h2=h1+deltaH; const volNeeded=a*a*deltaH;
+    const divs=divisorsOf(volNeeded).filter(d=>d>=2 && d<=40);
+    const time=divs.length? choice(divs) : volNeeded;
+    const rate=volNeeded/time;
+    return {q:`底面が1辺${a}cmの正方形である直方体の水そうに、深さ${h1}cmまで水が入っている。この水そうに毎分${rate}cm³ずつ水を入れるとき、水の深さが${h2}cmになるまでに何分かかるか求めなさい。`,
+      a:`${time}分`,
+      e:`増やす水の体積=${a}×${a}×(${h2}−${h1})=${volNeeded}cm³。時間=${volNeeded}÷${rate}=${time}分`};
+  }
+]});
+CATS.push({id:'shiryo1', grade:'中1', label:'資料の整理（代表値・相対度数）', variants:[
+  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+    const sorted=[...data].sort((a,b)=>a-b); const median=sorted[(n-1)/2];
+    return {q:`次のデータの中央値(メジアン)を求めなさい。\n【 ${data.join(', ')} 】`, a:`${median}`,
+      e:`小さい順：【 ${sorted.join(', ')} 】。中央（${(n+1)/2}番目）は ${median}`}; },
+  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+    const sorted=[...data].sort((a,b)=>a-b); const range=sorted[n-1]-sorted[0];
+    return {q:`次のデータの範囲を求めなさい。\n【 ${data.join(', ')} 】`, a:`${range}`,
+      e:`範囲=最大値−最小値=${sorted[n-1]}−${sorted[0]}=${range}`}; },
+  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+    const sum=data.reduce((a,b)=>a+b,0); if(sum%n!==0){ data[0]+=(n-(sum%n)); }
+    const sum2=data.reduce((a,b)=>a+b,0);
+    return {q:`次のデータの平均値を求めなさい。\n【 ${data.join(', ')} 】`, a:`${sum2/n}`,
+      e:`平均=合計÷個数=${sum2}÷${n}=${sum2/n}`}; },
+  ()=>{ const total=choice([20,25,40,50]); const freq=randInt(2,total-2); const rel=(freq/total).toFixed(2);
+    return {q:`あるクラス${total}人にアンケートをとったところ、${freq}人が「好き」と答えた。「好き」と答えた人の相対度数を求めなさい。(小数第2位まで)`,
+      a:`${rel}`, e:`相対度数=度数÷合計=${freq}÷${total}=${rel}`}; },
+  ()=>{ // 難関：平均の逆算（未知のデータを求める）
+    let avg,missing,total,remain;
+    do{
+      avg=randInt(50,90); missing=randInt(30,100); total=avg*5; remain=total-missing;
+    } while(remain<120 || remain>400);
+    let scores, tries=0, ok=false;
+    do{
+      const s1=randInt(30,100), s2=randInt(30,100), s3=randInt(30,100);
+      const s4=remain-s1-s2-s3;
+      if(s4>=30 && s4<=100){ scores=[s1,s2,s3,s4]; ok=true; }
+      tries++;
+    } while(!ok && tries<200);
+    if(!ok){ const base=Math.floor(remain/4), rem=remain-base*4; scores=[base+rem,base,base,base]; }
+    return {q:`5人が受けたテストの平均点は${avg}点だった。そのうち4人の得点が${scores.join('点、')}点のとき、残り1人の得点を求めなさい。`,
+      a:`${missing}点`,
+      e:`5人の合計点=${avg}×5=${total}点。4人の合計=${scores.reduce((a,b)=>a+b,0)}点なので、残り1人=${total}−${scores.reduce((a,b)=>a+b,0)}=${missing}点`};
   }
 ]});
 const panelBody=document.getElementById('panelBody');
