@@ -750,6 +750,117 @@ CATS.push({id:'shiryo1', grade:'中1', label:'資料の整理（代表値・相�
       e:`5人の合計点=${avg}×5=${total}点。4人の合計=${scores.reduce((a,b)=>a+b,0)}点なので、残り1人=${total}−${scores.reduce((a,b)=>a+b,0)}=${missing}点`};
   }
 ]});
+CATS.push({id:'tankou', grade:'中2', label:'単項式・多項式の乗除', variants:[
+  ()=>{ const a=randNZ(-9,9), b=randNZ(-9,9); const c=a*b;
+    const term=(k,label)=>{ const body=(k===1?label:k===-1?`−${label}`:`${k}${label}`); return k<0?`(${body})`:body; };
+    return {q:`${term(a,'x²y')} × ${term(b,'xy²')} を計算しなさい。`, a:`${c===1?'':c===-1?'−':c}x³y³`,
+      e:`係数どうし・文字どうしをかける：(${a})×(${b})=${c}、x²y×xy²=x³y³`}; },
+  ()=>{ const p=randNZ(-8,8), q1=randInt(1,7), q2=randInt(1,7), q3=randInt(1,9);
+    const q=`${p}x(${coefX(q1)} − ${q2===1?'y':`${q2}y`} + ${q3}) を計算しなさい。`;
+    return {q, a:buildPoly([[p*q1,'x²'],[-p*q2,'xy'],[p*q3,'x']]),
+      e:`分配法則で各項に${p}xをかける`}; },
+  ()=>{ const c=randInt(2,6), m=randInt(1,6), n=randInt(1,6); const a=c*m,b=c*n;
+    return {q:`(${a}x² + ${b}x) ÷ ${c}x を計算しなさい。`, a:buildPoly([[m,'x'],[n,'']]),
+      e:`各項を${c}xで割る：${a}x²÷${c}x=${m}x、${b}x÷${c}x=${n}`}; },
+  ()=>{ // 応用：式を計算してから代入する
+    const p=randNZ(-6,6), q1=randInt(1,5), q2=randInt(1,5);
+    const x=randInt(-4,4), y=randInt(-4,4);
+    const xcoef=p*q1, ycoef=p*q2;
+    const val=xcoef*x+ycoef*y;
+    return {q:`${p}(${coefX(q1)} + ${coefX(q2).replace('x','y')}) を計算し、さらにx=${x}、y=${y}のときの値を求めなさい。`,
+      a:`${buildPoly([[xcoef,'x'],[ycoef,'y']])}　（値：${val}）`,
+      e:`分配法則で ${buildPoly([[xcoef,'x'],[ycoef,'y']])} に整理してから x=${x}, y=${y} を代入：${xcoef}×(${x}) ${ycoef>=0?'+':'−'} ${Math.abs(ycoef)}×(${y})=${val}`};
+  },
+  ()=>{ // 難関：累乗を含む単項式の3口乗除
+    const c1=randNZ(-6,6), p1=randInt(2,3);
+    const sqCoeff=c1*c1, sqExp=2*p1;
+    const divs=divisorsOf(sqCoeff);
+    const c2=choice(divs)*choice([1,-1]);
+    const afterDivCoeff=sqCoeff/c2;
+    const p2=randInt(1,sqExp-1);
+    const expAfterDiv=sqExp-p2;
+    const c3=randNZ(-6,6), p3=randInt(1,2);
+    const finalCoeff=afterDivCoeff*c3, finalExp=expAfterDiv+p3;
+    const ct=(c,exp)=>{ if(c===1) return exp; if(c===-1) return `−${exp}`; return `${c}${exp}`; };
+    const ctP=(c,exp)=>{ const body=ct(c,exp); return c<0?`(${body})`:body; };
+    return {q:`(${ct(c1,xExp(p1))})² ÷ ${ctP(c2,xExp(p2))} × ${ctP(c3,xExp(p3))} を計算しなさい。`,
+      a:ct(finalCoeff,xExp(finalExp)),
+      e:`まず2乗を計算：(${ct(c1,xExp(p1))})²=${ct(sqCoeff,xExp(sqExp))}。次に÷${ctP(c2,xExp(p2))}=${ct(afterDivCoeff,xExp(expAfterDiv))}、×${ctP(c3,xExp(p3))}=${ct(finalCoeff,xExp(finalExp))}`};
+  }
+]});
+CATS.push({id:'rengou', grade:'中2', label:'連立方程式（発展）', variants:[
+  ()=>{
+    const xTrue=randNZ(-6,6), yTrue=randNZ(-6,6);
+    const a1=randInt(2,6), a2=randInt(2,6), b1=randNZ(-6,6), b2=randNZ(-6,6);
+    const c1=a1*xTrue+b1*yTrue, c2=a2*xTrue+b2*yTrue;
+    const g=gcd(a1,a2), m1=a2/g, m2=a1/g;
+    const eq1=`${coefX(a1)} ${pm(b1)}y = ${c1}`;
+    const eq2=`${coefX(a2)} ${pm(b2)}y = ${c2}`;
+    return {q:`次の連立方程式を解きなさい。\n① ${eq1}\n② ${eq2}`, a:`x = ${xTrue}, y = ${yTrue}`,
+      e:`①×${m1}、②×${m2}してxの係数をそろえ、辺々引く（足す）とyが求まる。x=${xTrue}, y=${yTrue}`};
+  },
+  ()=>{ // 応用：代金の文章題
+    const p=randInt(3,15)*10, q2=randInt(3,15)*10;
+    let x=randInt(2,15), y=randInt(2,15);
+    while(p===q2 && x===y){ y=randInt(2,15); }
+    const total=x+y, money=p*x+q2*y;
+    return {q:`1個${p}円のりんごと1個${q2}円のみかんを合わせて${total}個買ったところ、代金の合計が${money}円になった。りんごとみかんをそれぞれ何個買ったか求めなさい。`,
+      a:`りんご${x}個、みかん${y}個`,
+      e:`りんごの個数をx、みかんの個数をyとすると x+y=${total}、${p}x+${q2}y=${money}。これを解くと x=${x}, y=${y}`};
+  },
+  ()=>{ // 難関：分数を含む連立方程式
+    const denoms=[2,3,4,6];
+    const d1=choice(denoms), d2=choice(denoms), d3=choice(denoms), d4=choice(denoms);
+    const X=randNZ(-6,6), Y=randNZ(-6,6);
+    const c1=fadd([X,d1],[Y,d2]);
+    const c2=fsub([X,d3],[Y,d4]);
+    return {q:`次の連立方程式を解きなさい。\n① x/${d1} + y/${d2} = ${fstr(c1)}\n② x/${d3} − y/${d4} = ${fstr(c2)}`,
+      a:`x = ${X}, y = ${Y}`,
+      e:`①、②の両辺に分母の最小公倍数をかけて分母を払ってから解く。①×${lcm(d1,d2)}、②×${lcm(d3,d4)} として整理すると x=${X}, y=${Y}`};
+  },
+  ()=>{ // 難関：川の上り下りの文章題
+    const x=randInt(6,15), y=randInt(1,x-1);
+    const up=x-y, down=x+y;
+    const dist=up*down, t1=down, t2=up;
+    return {q:`静水時の速さが時速xkm、川の流れの速さが時速ykmの船がある。この船で${dist}km離れた地点まで川を上るのに${t1}時間、下るのに${t2}時間かかった。x、yの値を求めなさい。`,
+      a:`x = ${x}, y = ${y}`,
+      e:`上りの速さ＝x−y＝${dist}÷${t1}=${up}(km/h)、下りの速さ＝x+y＝${dist}÷${t2}=${down}(km/h)。連立方程式 x−y=${up}, x+y=${down} を解くと x=${x}, y=${y}`};
+  }
+]});
+CATS.push({id:'ichijikan', grade:'中2', label:'一次関数（式・変域）', variants:[
+  ()=>{ const m=randNZ(-5,5), x0=randInt(-4,4), y0=randInt(-6,6), d=randInt(1,4);
+    const x1=x0+d, y1=y0+m*d, b=y0-m*x0;
+    const dy=`${y1}${y0>=0?`−${y0}`:`+${Math.abs(y0)}`}`, dx=`${x1}${x0>=0?`−${x0}`:`+${Math.abs(x0)}`}`;
+    const xs=[x0,x1,0], ys=[y0,y1,0];
+    return {q:`2点 (${x0}, ${y0})、(${x1}, ${y1}) を通る直線の式を求めなさい。`,
+      a:`y = ${coefX(m)} ${pm(b)}`, e:`傾き a=(${dy})÷(${dx})=${m}。y=${m}x+bに(${x0}, ${y0})を代入してb=${b}`,
+      svg:makeGraph(Math.min(...xs)-2,Math.max(...xs)+2,Math.min(...ys)-2,Math.max(...ys)+2,
+        {points:[{x:x0,y:y0,label:`A(${x0},${y0})`},{x:x1,y:y1,label:`B(${x1},${y1})`}]})}; },
+  ()=>{ const a=randNZ(-5,5), b=randInt(-6,6), p=randInt(-6,3), qv=p+randInt(2,6);
+    const yp=a*p+b, yq=a*qv+b, lo=Math.min(yp,yq), hi=Math.max(yp,yq);
+    return {q:`一次関数 y = ${coefX(a)} ${pm(b)} について、xの変域が ${p} ≦ x ≦ ${qv} のときのyの変域を求めなさい。`,
+      a:`${lo} ≦ y ≦ ${hi}`, e:`x=${p}のときy=${yp}、x=${qv}のときy=${yq}。よって ${lo}≦y≦${hi}`,
+      svg:makeGraph(Math.min(p,0)-2,Math.max(qv,0)+2,Math.min(lo,0)-2,Math.max(hi,0)+2,{lines:[{slope:a,intercept:b}],segment:{x1:p,y1:yp,x2:qv,y2:yq}})}; },
+  ()=>{ // 応用：直線とx軸・y軸で囲まれた三角形の面積
+    const m=randInt(1,5), n=randInt(2,9);
+    const a=-m, b=m*n;
+    return {q:`直線 y = ${coefX(a)} ${pm(b)} とx軸、y軸で囲まれた三角形の面積を求めなさい。`,
+      a:`${fracStr(n*b,2)}`,
+      e:`x軸との交点は(${n}, 0)、y軸との交点は(0, ${b})。面積=(1/2)×${n}×${b}=${fracStr(n*b,2)}`,
+      svg:makeGraph(-1,n+2,-2,b+2,{polygon:[[0,0],[n,0],[0,b]],points:[{x:n,y:0,label:`(${n},0)`},{x:0,y:b,label:`(0,${b})`}]})};
+  },
+  ()=>{ // 難関：2直線の交点の座標を求める
+    let a1=randNZ(-5,5), a2=randNZ(-5,5); while(a2===a1){ a2=randNZ(-5,5); }
+    const xInt=randInt(-6,6), yInt=randInt(-9,9);
+    const b1=yInt-a1*xInt, b2=yInt-a2*xInt;
+    const line1= b1===0 ? `y = ${coefX(a1)}` : `y = ${coefX(a1)} ${pm(b1)}`;
+    const line2= b2===0 ? `y = ${coefX(a2)}` : `y = ${coefX(a2)} ${pm(b2)}`;
+    return {q:`2直線 ${line1} と ${line2} の交点の座標を求めなさい。`,
+      a:`(${xInt}, ${yInt})`,
+      e:`2式を連立して解く：${coefX(a1)}${pm(b1)}=${coefX(a2)}${pm(b2)} → (${diffStr(a1,a2)})x=${diffStr(b2,b1)} → x=${xInt}。代入してy=${yInt}`,
+      svg:makeGraph(xInt-3,xInt+3,yInt-4,yInt+4,{lines:[{slope:a1,intercept:b1},{slope:a2,intercept:b2}],points:[{x:xInt,y:yInt,label:'交点'}]})};
+  }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
