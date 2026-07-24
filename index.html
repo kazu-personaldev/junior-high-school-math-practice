@@ -1017,6 +1017,49 @@ CATS.push({id:'heihoukon', grade:'中3', label:'平方根の計算（発展）',
       e:`(√a+√b)²=a+b+2√(ab) の公式より ${a}+${b}+2√(${a}×${b}) = ${resultConst}+2√${inner}${ins!==inner?` = ${ansStr}`:''}`};
   }
 ]});
+CATS.push({id:'niji', grade:'中3', label:'二次方程式（発展）', variants:[
+  ()=>{ const a=randNZ(-9,9), b=randNZ(-9,9); const sum=a+b, prod=a*b;
+    const xTerm = sum===0?'':(sum>=0?` + ${sum}x`:` − ${Math.abs(sum)}x`);
+    const r1=-a, r2=-b;
+    return {q:`次の方程式を解きなさい。\nx²${xTerm} ${pm(prod)} = 0`,
+      a: r1===r2?`x = ${r1}（重解）`:`x = ${r1}, ${r2}`,
+      e:`因数分解すると (x ${pm(a)})(x ${pm(b)}) = 0`}; },
+  ()=>{ let p=randInt(2,5), qc=randNZ(-9,9), r=randInt(2,5), s=randNZ(-9,9);
+    let x2=p*r, x1=p*s+qc*r, x0=qc*s, tries=0;
+    while(gcd(gcd(x2,x1),x0)!==1 && tries<20){ p=randInt(2,5); qc=randNZ(-9,9); r=randInt(2,5); s=randNZ(-9,9);
+      x2=p*r; x1=p*s+qc*r; x0=qc*s; tries++; }
+    const xTerm = x1===0?'':(x1>=0?` + ${x1}x`:` − ${Math.abs(x1)}x`);
+    const r1=fracStr(-qc,p), r2=fracStr(-s,r);
+    return {q:`次の方程式を解きなさい。\n${x2}x²${xTerm} ${pm(x0)} = 0`, a:`x = ${r1}, ${r2}`,
+      e:`因数分解すると (${p}x ${pm(qc)})(${r}x ${pm(s)}) = 0`}; },
+  ()=>{ const a=randInt(-8,8), k=randInt(1,8), b=k*k;
+    const x1=-a+k, x2=-a-k;
+    return {q:`(x ${pm(a)})² = ${b} を解きなさい。`, a: x1===x2?`x = ${x1}`:`x = ${x1}, ${x2}`,
+      e:`x ${pm(a)} = ±${k} より x = ${-a}±${k}`}; }
+]});
+CATS.push({id:'yax2', grade:'中3', label:'関数 y=ax²', variants:[
+  ()=>{ const a=randNZ(-5,5), p=randInt(-5,5), qv=p+randInt(1,5);
+    const yp=a*p*p, yq=a*qv*qv, rate=(yq-yp)/(qv-p);
+    return {q:`関数 y = ${coefX(a)}² について、xが${p}から${qv}まで増加するときの変化の割合を求めなさい。`,
+      a:`${rate}`, e:`変化の割合=(${diffStr(yq,yp)})÷(${diffStr(qv,p)})=${rate}`}; },
+  ()=>{ const a=randNZ(-5,5), x2=randNZ(-8,8), y2=a*x2*x2;
+    return {q:`関数 y = ${coefX(a)}² について、x=${x2}のときのyの値を求めなさい。`, a:`y=${y2}`,
+      e:`y=${a}×(${x2})²=${a}×${x2*x2}=${y2}`}; },
+  ()=>{ // 応用：放物線と直線の融合、△OABの面積
+    const a=choice([1,2,-1,-2]);
+    const x1=randInt(-6,-1), x2=randInt(1,6);
+    const yA=a*x1*x1, yB=a*x2*x2;
+    const slope=a*(x1+x2), intercept=-a*x1*x2;
+    const area=fracStr(Math.abs(a*x1*x2*(x2-x1)),2);
+    const lineStr = slope===0 ? `y = ${intercept}` : `y = ${coefX(slope)} ${pm(intercept)}`;
+    const ys=[yA,yB,0];
+    return {q:`関数 y = ${coefX(a)}² のグラフ上に2点A(${x1}, ${yA})、B(${x2}, ${yB})がある。直線ABの式を求め、さらに原点Oを頂点とする△OABの面積を求めなさい。`,
+      a:`直線AB: ${lineStr}　△OABの面積: ${area}`,
+      e:`傾き=(${diffStr(yB,yA)})÷(${diffStr(x2,x1)})=${slope}。直線の式にA(${x1}, ${yA})を代入してy切片=${intercept}。△OABの面積は座標から(1/2)|x1×yB−x2×yA|で求められ ${area} となる。`,
+      svg:makeGraph(x1-1,x2+1,Math.min(...ys)-2,Math.max(...ys)+2,
+        {parabola:{a}, polygon:[[0,0],[x1,yA],[x2,yB]], points:[{x:x1,y:yA,label:`A(${x1},${yA})`},{x:x2,y:yB,label:`B(${x2},${yB})`}]})};
+  }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
