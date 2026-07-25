@@ -535,12 +535,6 @@ CATS.push({id:'seisu', grade:'中1', label:'正負の数の計算（難関レベ
     const decDisp = dsign<0?`(-${dstr0})`:dstr0;
     return {q:`${decDisp} + ${fracLabel(n2,d2)} × ${sgn(n3,true)} を計算しなさい。`, a:fstr(result),
       e:`小数を分数になおす：${decDisp}=${fracLabel(dn,dd0)}。乗法を先に：${fracLabel(n2,d2)}×${sgn(n3,true)}=${fstr(term2)}。${fracLabel(dn,dd0)} ${fpm(term2)} = ${fstr(result)}`};
-  },
-  ()=>{ // 応用：気温の文章題
-    const t1=randInt(-8,10), d1=randInt(1,12), d2=randInt(1,15);
-    const noon=t1+d1, eve=noon-d2;
-    return {q:`ある日の午前6時の気温は${t1}℃であった。正午までに${d1}℃上がり、午後6時までにさらに${d2}℃下がった。午後6時の気温を求めなさい。`,
-      a:`${eve}℃`, e:`正午の気温=${t1}+${d1}=${noon}℃。午後6時の気温=${noon}−${d2}=${eve}℃`};
   }
 ]});
 CATS.push({id:'bunpai', grade:'中1', label:'文字式の計算・整理', variants:[
