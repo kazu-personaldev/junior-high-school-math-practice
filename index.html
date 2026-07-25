@@ -1288,16 +1288,29 @@ async function exportPDF(){
     const pdf=new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
     const pageW=pdf.internal.pageSize.getWidth();
     const pageH=pdf.internal.pageSize.getHeight();
-    const ratio=Math.min(pageW/canvas.width, pageH/canvas.height);
-    const imgW=canvas.width*ratio;
-    const imgH=canvas.height*ratio;
-    const offsetX=(pageW-imgW)/2;
-    const offsetY=(pageH-imgH)/2;
-    const imgData=canvas.toDataURL('image/jpeg', 0.92);
-    pdf.addImage(imgData,'JPEG',offsetX,offsetY,imgW,imgH);
+    const ratio=pageW/canvas.width; // fit to page width; split height across multiple pages instead of shrinking
+    const pageCanvasHeightPx=Math.floor(pageH/ratio);
+    const totalPages=Math.max(1, Math.ceil(canvas.height/pageCanvasHeightPx));
+
+    for(let i=0;i<totalPages;i++){
+      const sliceY=i*pageCanvasHeightPx;
+      const sliceH=Math.min(pageCanvasHeightPx, canvas.height-sliceY);
+      const pageCanvas=document.createElement('canvas');
+      pageCanvas.width=canvas.width;
+      pageCanvas.height=sliceH;
+      const ctx=pageCanvas.getContext('2d');
+      ctx.fillStyle='#FAF7EF';
+      ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
+      ctx.drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      const imgData=pageCanvas.toDataURL('image/jpeg', 0.92);
+      const imgH=sliceH*ratio;
+      if(i>0) pdf.addPage();
+      pdf.addImage(imgData,'JPEG',0,0,pageW,imgH);
+    }
+
     const dateStr=new Date().toISOString().slice(0,10);
     pdf.save(`math-drill-${dateStr}.pdf`);
-    showCopyStatus('PDFを保存しました。', false);
+    showCopyStatus(totalPages>1 ? `PDFを保存しました（全${totalPages}ページ）。` : 'PDFを保存しました。', false);
   }catch(err){
     console.error(err);
     document.body.classList.remove('pdf-capturing');
