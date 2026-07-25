@@ -721,22 +721,28 @@ CATS.push({id:'kuukan', grade:'中1', label:'空間図形（角柱・円柱・�
   }
 ]});
 CATS.push({id:'shiryo1', grade:'中1', label:'資料の整理（代表値・相対度数）', variants:[
-  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+  ()=>{ const n=choice([9,11]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,99));
     const sorted=[...data].sort((a,b)=>a-b); const median=sorted[(n-1)/2];
     return {q:`次のデータの中央値(メジアン)を求めなさい。\n【 ${data.join(', ')} 】`, a:`${median}`,
       e:`小さい順：【 ${sorted.join(', ')} 】。中央（${(n+1)/2}番目）は ${median}`}; },
-  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+  ()=>{ // 難関：データの個数が偶数のときの中央値
+    const n=choice([6,8,10]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,99));
+    const sorted=[...data].sort((a,b)=>a-b); const mid1=sorted[n/2-1], mid2=sorted[n/2]; const median=(mid1+mid2)/2;
+    return {q:`次のデータの中央値(メジアン)を求めなさい。\n【 ${data.join(', ')} 】`, a:`${median}`,
+      e:`小さい順：【 ${sorted.join(', ')} 】。データの個数が偶数（${n}個）なので、中央の2つの値（${n/2}番目と${n/2+1}番目）の平均が中央値：(${mid1}+${mid2})÷2=${median}`}; },
+  ()=>{ const n=choice([9,11]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,99));
     const sorted=[...data].sort((a,b)=>a-b); const range=sorted[n-1]-sorted[0];
     return {q:`次のデータの範囲を求めなさい。\n【 ${data.join(', ')} 】`, a:`${range}`,
       e:`範囲=最大値−最小値=${sorted[n-1]}−${sorted[0]}=${range}`}; },
-  ()=>{ const n=choice([5,7]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,10)*10);
+  ()=>{ const n=choice([7,9]); let data=[]; for(let i=0;i<n;i++) data.push(randInt(1,99));
     const sum=data.reduce((a,b)=>a+b,0); if(sum%n!==0){ data[0]+=(n-(sum%n)); }
     const sum2=data.reduce((a,b)=>a+b,0);
     return {q:`次のデータの平均値を求めなさい。\n【 ${data.join(', ')} 】`, a:`${sum2/n}`,
       e:`平均=合計÷個数=${sum2}÷${n}=${sum2/n}`}; },
-  ()=>{ const total=choice([20,25,40,50]); const freq=randInt(2,total-2); const rel=(freq/total).toFixed(2);
-    return {q:`あるクラス${total}人にアンケートをとったところ、${freq}人が「好き」と答えた。「好き」と答えた人の相対度数を求めなさい。(小数第2位まで)`,
-      a:`${rel}`, e:`相対度数=度数÷合計=${freq}÷${total}=${rel}`}; },
+  ()=>{ // 難関：相対度数から人数を逆算
+    const total=choice([20,25,40,50,80]); const freq=randInt(2,total-2); const rel=(freq/total).toFixed(2);
+    return {q:`あるクラス${total}人にアンケートをとったところ、「好き」と答えた人の相対度数は${rel}であった。「好き」と答えた人数を求めなさい。`,
+      a:`${freq}人`, e:`人数=合計×相対度数=${total}×${rel}=${freq}人`}; },
   ()=>{ // 難関：平均の逆算（未知のデータを求める）
     let avg,missing,total,remain;
     do{
@@ -753,6 +759,29 @@ CATS.push({id:'shiryo1', grade:'中1', label:'資料の整理（代表値・相�
     return {q:`5人が受けたテストの平均点は${avg}点だった。そのうち4人の得点が${scores.join('点、')}点のとき、残り1人の得点を求めなさい。`,
       a:`${missing}点`,
       e:`5人の合計点=${avg}×5=${total}点。4人の合計=${scores.reduce((a,b)=>a+b,0)}点なので、残り1人=${total}−${scores.reduce((a,b)=>a+b,0)}=${missing}点`};
+  },
+  ()=>{ // 難関：度数分布表から平均値を求める
+    const width=10, classes=5;
+    const freqs=Array.from({length:classes},()=>randInt(1,8));
+    const total=freqs.reduce((a,b)=>a+b,0);
+    const mids=freqs.map((f,i)=>5+width*i);
+    const weighted=mids.reduce((s,m,i)=>s+m*freqs[i],0);
+    const mean=(weighted/total).toFixed(1);
+    const tableRows=freqs.map((f,i)=>`${width*i}以上${width*(i+1)}未満：${f}人`).join('\n');
+    return {q:`次の度数分布表は、あるクラスの小テストの得点をまとめたものである。平均値を求めなさい。（小数第1位まで）\n${tableRows}`,
+      a:`${mean}点`,
+      e:`各階級の階級値×度数を合計する：${mids.map((m,i)=>`${m}×${freqs[i]}`).join('+')}=${weighted}。平均=${weighted}÷${total}=${mean}点`};
+  },
+  ()=>{ // 難関：度数分布表の最頻値
+    const width=10, classes=5;
+    let freqs;
+    do{ freqs=Array.from({length:classes},()=>randInt(1,8)); } while(freqs.filter(f=>f===Math.max(...freqs)).length>1);
+    const maxIdx=freqs.indexOf(Math.max(...freqs));
+    const mode=5+width*maxIdx;
+    const tableRows=freqs.map((f,i)=>`${width*i}以上${width*(i+1)}未満：${f}人`).join('\n');
+    return {q:`次の度数分布表は、あるクラスの小テストの得点をまとめたものである。最頻値を求めなさい。\n${tableRows}`,
+      a:`${mode}点`,
+      e:`度数が最も多い階級は${width*maxIdx}以上${width*(maxIdx+1)}未満（度数${freqs[maxIdx]}人）。その階級値（階級の真ん中の値）は${mode}点`};
   }
 ]});
 CATS.push({id:'tankou', grade:'中2', label:'単項式・多項式の乗除', variants:[
