@@ -1091,6 +1091,37 @@ CATS.push({id:'enshuu', grade:'中3', label:'円周角の定理', variants:[
       a:`${180-a}°`, e:`円に内接する四角形の対角の和は180°なので ∠C=180−${a}=${180-a}°`, svg:drawCyclicQuad(a)};
   }
 ]});
+CATS.push({id:'sanheihou', grade:'中3', label:'三平方の定理', variants:[
+  ()=>{ const triples=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[10,24,26],[12,16,20],[9,40,41],[20,21,29]];
+    let [a,b,c]=choice(triples); const s=randInt(1,2); a*=s;b*=s;c*=s;
+    return {q:`直角三角形の直角をはさむ2辺の長さが${a}cm、${b}cmであるとき、斜辺の長さを求めなさい。`, a:`${c}cm`,
+      e:`斜辺²=${a}²+${b}²=${a*a}+${b*b}=${c*c} → 斜辺=${c}cm`, svg:drawRightTriangle(`${a}cm`,`${b}cm`,'?')}; },
+  ()=>{ const triples=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[10,24,26],[12,16,20],[9,40,41],[20,21,29]];
+    let [a,b,c]=choice(triples); const s=randInt(1,2); a*=s;b*=s;c*=s;
+    return {q:`直角三角形の斜辺の長さが${c}cm、他の1辺が${a}cmであるとき、残りの辺の長さを求めなさい。`, a:`${b}cm`,
+      e:`残りの辺²=${c}²−${a}²=${c*c}−${a*a}=${b*b} → 残りの辺=${b}cm`, svg:drawRightTriangle(`${a}cm`,'?',`${c}cm`)}; },
+  ()=>{ // 応用：座標平面上の2点間の距離
+    const triples=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25]];
+    const [dx0,dy0,c]=choice(triples);
+    const sx=choice([-1,1]), sy=choice([-1,1]);
+    const x1=randInt(-6,6), y1=randInt(-6,6);
+    const x2=x1+dx0*sx, y2=y1+dy0*sy;
+    return {q:`2点A(${x1}, ${y1})、B(${x2}, ${y2})間の距離を求めなさい。`, a:`${c}`,
+      e:`距離²=(${diffStr(x2,x1)})²+(${diffStr(y2,y1)})²=${dx0}²+${dy0}²=${dx0*dx0}+${dy0*dy0}=${c*c} → 距離=${c}`,
+      svg:makeGraph(Math.min(x1,x2)-2,Math.max(x1,x2)+2,Math.min(y1,y2)-2,Math.max(y1,y2)+2,{points:[{x:x1,y:y1,label:'A'},{x:x2,y:y2,label:'B'}]})};
+  },
+  ()=>{ // 応用：直方体の対角線
+    const list=[[1,2,2,3],[2,3,6,7],[3,4,12,13],[4,4,7,9],[2,6,9,11],[6,6,7,11],[1,4,8,9],[2,10,11,15]];
+    const [a,b,c,d]=choice(list);
+    return {q:`縦${a}cm、横${b}cm、高さ${c}cmの直方体の対角線の長さを求めなさい。`, a:`${d}cm`,
+      e:`対角線²=${a}²+${b}²+${c}²=${a*a}+${b*b}+${c*c}=${d*d} → 対角線=${d}cm`};
+  }
+]});
+CATS.push({id:'hyouhon', grade:'中3', label:'標本調査（推定の計算）', variants:[
+  ()=>{ const r=randInt(5,20), k=randInt(3,6), n=k*randInt(2,5); const x=n/k;
+    return {q:`袋の中に同じ大きさの白玉がたくさん入っている。ここに同じ大きさの赤玉を${r}個入れてよくかき混ぜた後、${n}個を取り出すと、その中に赤玉が${x}個含まれていた。この袋の中の白玉の数はおよそ何個と推定できるか。`,
+      a:`約${r*(k-1)}個`, e:`全体≒${r}×${n}÷${x}=${r*k}個。白玉は${r*k}−${r}=${r*(k-1)}個`}; }
+]});
 const panelBody=document.getElementById('panelBody');
 const GRADES=['中1','中2','中3'];
 GRADES.forEach(g=>{
