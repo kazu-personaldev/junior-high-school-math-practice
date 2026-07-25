@@ -105,10 +105,6 @@
   button.ghost{border-color:var(--paper-line);background:transparent;color:var(--ink-soft);font-weight:600;}
   button.small{padding:7px 12px;font-size:12.5px;}
   button:disabled{opacity:.4;cursor:not-allowed;}
-  #timer{
-    font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;padding:6px 12px;
-    border:1.5px dashed var(--ink-soft);border-radius:3px;color:var(--ink);min-width:64px;text-align:center;
-  }
   .spacer{flex:1;}
 
   #grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--paper-line);border-left:1px solid var(--paper-line);}
@@ -163,7 +159,6 @@
     .meta{font-size:11px;}
     button{padding:10px 12px;font-size:13px;}
     button.small{padding:9px 10px;font-size:12px;}
-    #timer{font-size:14px;min-width:56px;}
     .cell{padding:8px 10px 10px;}
     .qtext{font-size:13.5px;}
   }
@@ -211,11 +206,7 @@
   <div class="toolbar">
     <button id="genBtn">🎲 問題を生成する</button>
     <button id="ansBtn" class="secondary" disabled>📝 解答・解説を見る</button>
-    <button id="timerBtn" class="ghost" disabled>⏱ 20分タイマー開始</button>
-    <span id="timer" style="display:none;">20:00</span>
     <div class="spacer"></div>
-    <button id="copyQBtn" class="ghost" disabled>📋 問題だけコピー</button>
-    <button id="copyABtn" class="ghost" disabled>📋 解答だけコピー</button>
     <button id="pdfBtn" class="ghost" disabled>📄 PDFで保存</button>
     <button id="printBtn" class="ghost" disabled>🖨 印刷する</button>
   </div>
@@ -1194,16 +1185,11 @@ const genBtn=document.getElementById('genBtn');
 const ansBtn=document.getElementById('ansBtn');
 const printBtn=document.getElementById('printBtn');
 const pdfBtn=document.getElementById('pdfBtn');
-const timerBtn=document.getElementById('timerBtn');
-const timerEl=document.getElementById('timer');
 const topicBtn=document.getElementById('topicBtn');
 const topicInput=document.getElementById('topicInput');
 const topicStatus=document.getElementById('topicStatus');
-const copyQBtn=document.getElementById('copyQBtn');
-const copyABtn=document.getElementById('copyABtn');
 const copyStatus=document.getElementById('copyStatus');
 
-let timerInterval=null;
 let currentProblems=[]; // {id, custom, tag, q, a, e, svg}
 let nextProblemId=1;
 const TARGET=20;
@@ -1256,7 +1242,6 @@ function renderGrid(){
   document.getElementById('qcount2').textContent=total;
   const hasProblems=total>0;
   ansBtn.disabled=!hasProblems; printBtn.disabled=!hasProblems; pdfBtn.disabled=!hasProblems;
-  timerBtn.disabled=!hasProblems; copyQBtn.disabled=!hasProblems; copyABtn.disabled=!hasProblems;
 }
 
 function generateSet(){
@@ -1367,57 +1352,10 @@ async function exportPDF(){
 }
 pdfBtn.addEventListener('click', exportPDF);
 
-async function copyToClipboard(text){
-  try{
-    await navigator.clipboard.writeText(text);
-    return true;
-  }catch(e){
-    try{
-      const ta=document.createElement('textarea');
-      ta.value=text;
-      ta.style.position='fixed'; ta.style.opacity='0';
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      const ok=document.execCommand('copy');
-      document.body.removeChild(ta);
-      return ok;
-    }catch(e2){ return false; }
-  }
-}
 function showCopyStatus(msg, isError){
   copyStatus.style.color = isError ? 'var(--red)' : 'var(--teal)';
   copyStatus.textContent = msg;
 }
-function toPlainText(s){
-  return String(s).replace(/<span class="frac"><span class="fnum">(.*?)<\/span><span class="fden">(.*?)<\/span><\/span>/g, '$1/$2');
-}
-copyQBtn.addEventListener('click', async ()=>{
-  if(currentProblems.length===0) return;
-  const text = currentProblems.map((p,i)=>`問${i+1}）${toPlainText(p.q)}`).join('\n\n');
-  const ok = await copyToClipboard(text);
-  showCopyStatus(ok ? '問題（解答なし）をコピーしました。生徒用として貼り付けられます。' : 'コピーに失敗しました。手動で選択してコピーしてください。', !ok);
-});
-copyABtn.addEventListener('click', async ()=>{
-  if(currentProblems.length===0) return;
-  const text = currentProblems.map((p,i)=>`問${i+1}）答え：${toPlainText(p.a)}\n解説：${toPlainText(p.e)}`).join('\n\n');
-  const ok = await copyToClipboard(text);
-  showCopyStatus(ok ? '解答・解説だけをコピーしました。先生用の答案としてお使いください。' : 'コピーに失敗しました。手動で選択してコピーしてください。', !ok);
-});
-
-timerBtn.addEventListener('click', ()=>{
-  if(timerInterval){ clearInterval(timerInterval); timerInterval=null; timerBtn.textContent='⏱ 20分タイマー開始'; return; }
-  let remaining=20*60;
-  timerEl.style.display='inline-block';
-  timerBtn.textContent='⏸ タイマー停止';
-  const tick=()=>{
-    const m=Math.floor(remaining/60), s=remaining%60;
-    timerEl.textContent=`${m}:${s.toString().padStart(2,'0')}`;
-    if(remaining<=0){ clearInterval(timerInterval); timerInterval=null; timerEl.textContent='終了！'; timerBtn.textContent='⏱ 20分タイマー開始'; return; }
-    remaining--;
-  };
-  tick();
-  timerInterval=setInterval(tick,1000);
-});
 
 /* ---------- custom topic via Anthropic API ---------- */
 topicBtn.addEventListener('click', async ()=>{
