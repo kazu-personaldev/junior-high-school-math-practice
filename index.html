@@ -118,6 +118,9 @@
   .qtag{font-size:9.5px;color:var(--ink-soft);border:1px solid var(--paper-line);border-radius:9px;padding:1px 7px;margin-left:6px;}
   .cell.custom .qtag{color:var(--red);border-color:var(--red-soft);}
   .qtext{font-size:15px;margin:5px 0 8px;line-height:1.5;white-space:pre-wrap;}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;text-align:center;margin:0 1px;font-size:0.86em;line-height:1.15;position:relative;top:0.05em;}
+  .frac .fnum{border-bottom:1.2px solid currentColor;padding:0 3px 1px;}
+  .frac .fden{padding:1px 3px 0;}
   .worklines{height:20px;border-bottom:1px dotted var(--paper-line);margin-bottom:4px;}
   .answer{display:none;margin-top:6px;padding:7px 10px;background:var(--red-soft);border-left:3px solid var(--red);font-size:12.5px;line-height:1.6;color:#4a2c22;}
   .answer b{color:var(--red);font-size:13.5px;}
@@ -130,8 +133,8 @@
     body{background:#fff;padding:0;}
     .sheet{box-shadow:none;border:none;max-width:100%;padding:8mm 10mm;}
     .toolbar,.panel,.topic-box{display:none;}
-    #grid.show-answers .worklines{display:block;}
-    .answer{display:block !important;}
+    .worklines{display:block !important;}
+    .answer{display:none !important;}
     @page{size:A4;margin:8mm;}
   }
   body.pdf-capturing{background:#fff;}
@@ -257,11 +260,13 @@ function buildPoly(terms){
   });
   return out || '0';
 }
+function fracHTML(num,den){ return `<span class="frac"><span class="fnum">${num}</span><span class="fden">${den}</span></span>`; }
 function fracStr(n,d){
   const g=gcd(n,d)||1; n/=g; d/=g;
   if(d<0){n=-n;d=-d;}
   if(d===1) return `${n}`;
-  return `${n}/${d}`;
+  const sign = n<0 ? '−' : '';
+  return `${sign}${fracHTML(Math.abs(n),d)}`;
 }
 /* exact fraction arithmetic as [numerator,denominator] pairs */
 function fadd(f1,f2){ return [f1[0]*f2[1]+f2[0]*f1[1], f1[1]*f2[1]]; }
@@ -269,9 +274,15 @@ function fsub(f1,f2){ return [f1[0]*f2[1]-f2[0]*f1[1], f1[1]*f2[1]]; }
 function fmul(f1,f2){ return [f1[0]*f2[0], f1[1]*f2[1]]; }
 function fdiv(f1,f2){ return [f1[0]*f2[1], f1[1]*f2[0]]; }
 function fsimp(f){ let [n,d]=f; const g=gcd(n,d)||1; n/=g; d/=g; if(d<0){n=-n;d=-d;} return [n,d]; }
-function fstr(f){ const [n,d]=fsimp(f); return d===1?`${n}`:`${n}/${d}`; }
-function fracLabel(n,d){ const [sn,sd]=fsimp([n,d]); const body=sd===1?`${sn}`:`${sn}/${sd}`; return sn<0?`(${body})`:body; }
-function fpm(f){ const [n,d]=fsimp(f); const body=d===1?`${Math.abs(n)}`:`${Math.abs(n)}/${d}`; return n>=0?`+ ${body}`:`− ${body}`; }
+function fstr(f){ const [n,d]=fsimp(f); if(d===1) return `${n}`; const sign=n<0?'−':''; return `${sign}${fracHTML(Math.abs(n),d)}`; }
+function fracLabel(n,d){
+  const [sn,sd]=fsimp([n,d]);
+  if(sd===1) return sn<0?`(${sn})`:`${sn}`;
+  const absBody=fracHTML(Math.abs(sn),sd);
+  const body = sn<0?`−${absBody}`:absBody;
+  return sn<0?`(${body})`:body;
+}
+function fpm(f){ const [n,d]=fsimp(f); const body=d===1?`${Math.abs(n)}`:fracHTML(Math.abs(n),d); return n>=0?`+ ${body}`:`− ${body}`; }
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
 function sup(n){ return String(n).split('').map(d=>SUP[d]).join(''); }
 function xExp(n){ return n<=0?'':(n===1?'x':`x${sup(n)}`); }
@@ -282,7 +293,7 @@ function buildFracPoly(terms){
   terms.forEach(([f,label])=>{
     const [n,d]=fsimp(f);
     if(n===0) return;
-    const absBody=d===1?`${Math.abs(n)}`:`${Math.abs(n)}/${d}`;
+    const absBody=d===1?`${Math.abs(n)}`:fracHTML(Math.abs(n),d);
     const coeffStr=(Math.abs(n)===1 && d===1 && label!=='')?'':absBody;
     const term=`${coeffStr}${label}`;
     if(first){ out += (n<0?`−${term}`:`${term}`); first=false; }
@@ -613,20 +624,20 @@ CATS.push({id:'ichiji1_bunsu', grade:'中1', label:'一次方程式（分数を�
   ()=>{
     const p=randInt(2,6), qc=randInt(1,9), k=randNZ(-6,6);
     const xTrue=p*k, r=k+qc;
-    return {q:`x/${p} + ${qc} = ${r} を解きなさい。`, a:`x = ${xTrue}`,
-      e:`両辺から${qc}を引く：x/${p} = ${r-qc}。両辺に${p}をかけて x = ${p}×${r-qc} = ${xTrue}`};
+    return {q:`${fracHTML('x',p)} + ${qc} = ${r} を解きなさい。`, a:`x = ${xTrue}`,
+      e:`両辺から${qc}を引く：${fracHTML('x',p)} = ${r-qc}。両辺に${p}をかけて x = ${p}×${r-qc} = ${xTrue}`};
   },
   ()=>{ // 分数(両辺)のクロス乗算タイプ
     const denoms=[2,3,4,5,6]; const p=choice(denoms); let q2=choice(denoms); while(q2===p){ q2=choice(denoms); }
     const c=randInt(-6,6), xTrue=randNZ(-9,9);
     const m=p*c-xTrue, n=q2*c-xTrue;
-    return {q:`(x ${pm(m)}) / ${p} = (x ${pm(n)}) / ${q2} を解きなさい。`, a:`x = ${xTrue}`,
+    return {q:`${fracHTML(`x ${pm(m)}`,p)} = ${fracHTML(`x ${pm(n)}`,q2)} を解きなさい。`, a:`x = ${xTrue}`,
       e:`両辺に${p}と${q2}をかけて分母を払うと ${q2}(x ${pm(m)}) = ${p}(x ${pm(n)})。整理すると x=${xTrue}`};
   },
   ()=>{ // 難関：異なる分母を持つ2つの分数項 x/d1 − x/d2 = k
     const denoms=[2,3,4,5,6]; const d1=choice(denoms); let d2=choice(denoms); while(d2===d1){ d2=choice(denoms); }
     const j=randNZ(-4,4); const xTrue=d1*d2*j; const k=(d2-d1)*j;
-    return {q:`x/${d1} − x/${d2} = ${k} を解きなさい。`, a:`x = ${xTrue}`,
+    return {q:`${fracHTML('x',d1)} − ${fracHTML('x',d2)} = ${k} を解きなさい。`, a:`x = ${xTrue}`,
       e:`両辺に${d1}×${d2}=${d1*d2}をかけて分母を払うと ${d2}x − ${d1}x = ${k*d1*d2} → (${d2}−${d1})x=${k*d1*d2} → x=${xTrue}`};
   }
 ]});
@@ -664,19 +675,19 @@ CATS.push({id:'ougi', grade:'中1', label:'円・おうぎ形の面積と弧の�
   ()=>{
     const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
     return {q:`半径${r}cm、中心角${th}°のおうぎ形の弧の長さを求めなさい。`, a:`${fracStr(2*r*th,360)}π cm`,
-      e:`弧の長さ=2πr×(中心角/360)=2π×${r}×${th}/360 = ${fracStr(2*r*th,360)}π cm`};
+      e:`弧の長さ=2πr×(中心角/360)=2π×${r}×${fracHTML(th,360)} = ${fracStr(2*r*th,360)}π cm`};
   },
   ()=>{
     const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
     return {q:`半径${r}cm、中心角${th}°のおうぎ形の面積を求めなさい。`, a:`${fracStr(r*r*th,360)}π cm²`,
-      e:`面積=πr²×(中心角/360)=π×${r}²×${th}/360 = ${fracStr(r*r*th,360)}π cm²`};
+      e:`面積=πr²×(中心角/360)=π×${r}²×${fracHTML(th,360)} = ${fracStr(r*r*th,360)}π cm²`};
   },
   ()=>{ // 応用：同心の2つのおうぎ形にはさまれた部分の面積
     const th=choice([30,45,60,90,120,150,180]);
     const r=randInt(2,7), R=r+randInt(2,6);
     return {q:`中心角が共通で${th}°、半径が${R}cmと${r}cm(${R}cm > ${r}cm)の2つのおうぎ形がある。この2つの弧の間にはさまれた部分の面積を求めなさい。`,
       a:`${fracStr((R*R-r*r)*th,360)}π cm²`,
-      e:`大きいおうぎ形−小さいおうぎ形＝π×(${R}²−${r}²)×${th}/360 = ${fracStr((R*R-r*r)*th,360)}π cm²`};
+      e:`大きいおうぎ形−小さいおうぎ形＝π×(${R}²−${r}²)×${fracHTML(th,360)} = ${fracStr((R*R-r*r)*th,360)}π cm²`};
   },
   ()=>{ // 難関：半円と正方形を組み合わせた複合図形の周の長さ
     const r=randInt(2,9); const side=2*r;
@@ -814,7 +825,7 @@ CATS.push({id:'rengou', grade:'中2', label:'連立方程式（発展）', varia
     const X=randNZ(-6,6), Y=randNZ(-6,6);
     const c1=fadd([X,d1],[Y,d2]);
     const c2=fsub([X,d3],[Y,d4]);
-    return {q:`次の連立方程式を解きなさい。\n① x/${d1} + y/${d2} = ${fstr(c1)}\n② x/${d3} − y/${d4} = ${fstr(c2)}`,
+    return {q:`次の連立方程式を解きなさい。\n① ${fracHTML('x',d1)} + ${fracHTML('y',d2)} = ${fstr(c1)}\n② ${fracHTML('x',d3)} − ${fracHTML('y',d4)} = ${fstr(c2)}`,
       a:`x = ${X}, y = ${Y}`,
       e:`①、②の両辺に分母の最小公倍数をかけて分母を払ってから解く。①×${lcm(d1,d2)}、②×${lcm(d3,d4)} として整理すると x=${X}, y=${Y}`};
   },
@@ -883,17 +894,17 @@ CATS.push({id:'kakuritsu2', grade:'中2', label:'確率', variants:[
   ()=>{ const k=randInt(2,12); let count=0;
     for(let i=1;i<=6;i++) for(let j=1;j<=6;j++) if(i+j===k) count++;
     return {q:`大小2つのさいころを同時に投げるとき、出た目の和が${k}になる確率を求めなさい。`, a:`${fracStr(count,36)}`,
-      e:`和が${k}になる組は${count}通り。全部で36通りなので確率は${count}/36=${fracStr(count,36)}`}; },
+      e:`和が${k}になる組は${count}通り。全部で36通りなので確率は${fracHTML(count,36)}=${fracStr(count,36)}`}; },
   ()=>{ const rd=randInt(2,5), wh=randInt(2,5), total=rd+wh;
     const totalWays=total*(total-1)/2, redWays=rd*(rd-1)/2;
     return {q:`赤玉${rd}個、白玉${wh}個が入った袋から同時に2個取り出すとき、2個とも赤玉である確率を求めなさい。`,
-      a:`${fracStr(redWays,totalWays)}`, e:`全部の取り出し方は${totalWays}通り、2個とも赤は${redWays}通り。確率=${redWays}/${totalWays}=${fracStr(redWays,totalWays)}`}; },
+      a:`${fracStr(redWays,totalWays)}`, e:`全部の取り出し方は${totalWays}通り、2個とも赤は${redWays}通り。確率=${fracHTML(redWays,totalWays)}=${fracStr(redWays,totalWays)}`}; },
   ()=>{ // 難関：3枚の硬貨の確率
     const k=randInt(0,3);
     const C3=[1,3,3,1];
     return {q:`3枚の硬貨を同時に投げるとき、ちょうど${k}枚が表になる確率を求めなさい。`,
       a:`${fracStr(C3[k],8)}`,
-      e:`3枚の硬貨の出方は全部で2³=8通り。ちょうど${k}枚表になる場合の数は${C3[k]}通り。確率=${C3[k]}/8=${fracStr(C3[k],8)}`};
+      e:`3枚の硬貨の出方は全部で2³=8通り。ちょうど${k}枚表になる場合の数は${C3[k]}通り。確率=${fracHTML(C3[k],8)}=${fracStr(C3[k],8)}`};
   },
   ()=>{ // 応用：カードの和が偶数になる確率
     const n=randInt(6,10);
@@ -902,7 +913,7 @@ CATS.push({id:'kakuritsu2', grade:'中2', label:'確率', variants:[
     const ways=C2(evens)+C2(odds), tot=C2(n);
     return {q:`1から${n}までの数字が1つずつ書かれた${n}枚のカードから同時に2枚取り出すとき、書かれた数の和が偶数になる確率を求めなさい。`,
       a:`${fracStr(ways,tot)}`,
-      e:`1〜${n}のうち偶数は${evens}個、奇数は${odds}個。和が偶数になるのは同じ偶奇の2枚を選ぶとき：${C2(evens)}+${C2(odds)}=${ways}通り。全体は${tot}通りなので確率は${ways}/${tot}=${fracStr(ways,tot)}`};
+      e:`1〜${n}のうち偶数は${evens}個、奇数は${odds}個。和が偶数になるのは同じ偶奇の2枚を選ぶとき：${C2(evens)}+${C2(odds)}=${ways}通り。全体は${tot}通りなので確率は${fracHTML(ways,tot)}=${fracStr(ways,tot)}`};
   }
 ]});
 CATS.push({id:'tenkai', grade:'中3', label:'展開（乗法公式・発展）', variants:[
@@ -994,16 +1005,16 @@ CATS.push({id:'heihoukon', grade:'中3', label:'平方根の計算（発展）',
     return {q:`√${a} × (√${b} + √${c}) を計算しなさい。`, a:`${sqrtTerm(c1,i1)} + ${sqrtTerm(c2,i2)}`,
       e:`分配法則で √${a}×√${b} と √${a}×√${c} に分けてそれぞれ計算する`}; },
   ()=>{ const a=randInt(1,9), b=choice([2,3,5,6,7]); const g=gcd(a,b); const numer=a/g, denom=b/g;
-    const ansStr= denom===1? `${numer}√${b}` : `${numer}√${b}/${denom}`;
+    const ansStr= denom===1? `${numer}√${b}` : fracHTML(`${numer}√${b}`,denom);
     return {q:`${a} ÷ √${b} の分母を有理化して答えなさい。`, a:ansStr,
-      e:`分母・分子に√${b}をかけて ${a}√${b}/${b}${g>1?`（約分して ${ansStr}）`:''}`}; },
+      e:`分母・分子に√${b}をかけて ${fracHTML(`${a}√${b}`,b)}${g>1?`（約分して ${ansStr}）`:''}`}; },
   ()=>{ // 難関：共役を使った分母の有理化
     const sqfree=[2,3,5,6,7,10,11,13,14,15,17,19];
     let a=choice(sqfree), b=choice(sqfree);
     while(a===b){ b=choice(sqfree); }
     if(a<b){ [a,b]=[b,a]; }
     const denom=a-b;
-    const ansStr = denom===1? `√${a} − √${b}` : `(√${a} − √${b})/${denom}`;
+    const ansStr = denom===1? `√${a} − √${b}` : fracHTML(`√${a} − √${b}`,denom);
     return {q:`1 / (√${a} + √${b}) の分母を有理化しなさい。`, a:ansStr,
       e:`分母の共役 √${a}−√${b} を分子・分母にかける：(√${a}−√${b}) / {(√${a}+√${b})(√${a}−√${b})} = (√${a}−√${b}) / (${a}−${b}) = ${ansStr}`};
   },
@@ -1064,11 +1075,11 @@ CATS.push({id:'souji', grade:'中3', label:'相似な図形', variants:[
   ()=>{ const [m,n]=choice([[2,3],[3,4],[2,5],[3,5],[4,5],[1,2],[1,3]]); const k=randInt(2,8);
     const lenA=m*k, lenB=n*k;
     return {q:`相似な2つの図形PとQがあり、相似比は${m}:${n}である。Pのある辺の長さが${lenA}cmのとき、Qの対応する辺の長さを求めなさい。`,
-      a:`${lenB}cm`, e:`相似比${m}:${n}なので ${lenA}×(${n}/${m})=${lenB}cm`, svg:drawSimilarTriangles(`${lenA}cm`,'?')}; },
+      a:`${lenB}cm`, e:`相似比${m}:${n}なので ${lenA}×${fracHTML(n,m)}=${lenB}cm`, svg:drawSimilarTriangles(`${lenA}cm`,'?')}; },
   ()=>{ const [m,n]=choice([[2,3],[3,4],[2,5],[3,5],[4,5]]); const u=randInt(1,6);
     const areaP=m*m*u, areaQ=n*n*u;
     return {q:`相似な2つの図形PとQの相似比が${m}:${n}である。Pの面積が${areaP}cm²のとき、Qの面積を求めなさい。`,
-      a:`${areaQ}cm²`, e:`面積比は相似比の2乗：${m}²:${n}²=${m*m}:${n*n}。${areaP}×(${n*n}/${m*m})=${areaQ}cm²`}; },
+      a:`${areaQ}cm²`, e:`面積比は相似比の2乗：${m}²:${n}²=${m*m}:${n*n}。${areaP}×${fracHTML(n*n,m*m)}=${areaQ}cm²`}; },
   ()=>{ // 応用：中点連結定理
     const bc=randInt(2,15)*2;
     return {q:`△ABCの辺AB、ACの中点をそれぞれM、Nとする。BC=${bc}cmのとき、MNの長さを求めなさい。`,
@@ -1174,6 +1185,23 @@ let currentProblems=[]; // {id, custom, tag, q, a, e, svg}
 let nextProblemId=1;
 const TARGET=20;
 const TOPIC_ADD_COUNT=5;
+const STATE_KEY='mathDrillState';
+
+function saveState(){
+  try{ localStorage.setItem(STATE_KEY, JSON.stringify({currentProblems, nextProblemId})); }catch(e){}
+}
+function restoreState(){
+  try{
+    const raw=localStorage.getItem(STATE_KEY);
+    if(!raw) return;
+    const data=JSON.parse(raw);
+    if(Array.isArray(data.currentProblems) && data.currentProblems.length>0){
+      currentProblems=data.currentProblems;
+      nextProblemId=data.nextProblemId||(currentProblems.length+1);
+      renderGrid();
+    }
+  }catch(e){}
+}
 
 function cellHTML(num, tag, p){
   return `
@@ -1228,6 +1256,7 @@ function generateSet(){
     return {id:nextProblemId++, custom:false, tag:`${cat.grade}・${cat.label}`, q:p.q, a:p.a, e:p.e, svg:p.svg||''};
   });
   renderGrid();
+  saveState();
 }
 genBtn.addEventListener('click', generateSet);
 
@@ -1301,15 +1330,18 @@ function showCopyStatus(msg, isError){
   copyStatus.style.color = isError ? 'var(--red)' : 'var(--teal)';
   copyStatus.textContent = msg;
 }
+function toPlainText(s){
+  return String(s).replace(/<span class="frac"><span class="fnum">(.*?)<\/span><span class="fden">(.*?)<\/span><\/span>/g, '$1/$2');
+}
 copyQBtn.addEventListener('click', async ()=>{
   if(currentProblems.length===0) return;
-  const text = currentProblems.map((p,i)=>`問${i+1}）${p.q}`).join('\n\n');
+  const text = currentProblems.map((p,i)=>`問${i+1}）${toPlainText(p.q)}`).join('\n\n');
   const ok = await copyToClipboard(text);
   showCopyStatus(ok ? '問題（解答なし）をコピーしました。生徒用として貼り付けられます。' : 'コピーに失敗しました。手動で選択してコピーしてください。', !ok);
 });
 copyABtn.addEventListener('click', async ()=>{
   if(currentProblems.length===0) return;
-  const text = currentProblems.map((p,i)=>`問${i+1}）答え：${p.a}\n解説：${p.e}`).join('\n\n');
+  const text = currentProblems.map((p,i)=>`問${i+1}）答え：${toPlainText(p.a)}\n解説：${toPlainText(p.e)}`).join('\n\n');
   const ok = await copyToClipboard(text);
   showCopyStatus(ok ? '解答・解説だけをコピーしました。先生用の答案としてお使いください。' : 'コピーに失敗しました。手動で選択してコピーしてください。', !ok);
 });
@@ -1404,6 +1436,7 @@ topicBtn.addEventListener('click', async ()=>{
     }
 
     renderGrid();
+    saveState();
     topicStatus.style.color='var(--teal)';
     topicStatus.textContent=`「${topic}」の問題を${newEntries.length}問追加しました（既存の問題を${removeIdx.length}問減らして、全体は${currentProblems.length}問です）。`;
   }catch(err){
@@ -1420,6 +1453,8 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
+
+restoreState();
 </script>
 </body>
 </html>
