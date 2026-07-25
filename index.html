@@ -131,6 +131,7 @@
     .toolbar,.panel,.topic-box{display:none;}
     .worklines{display:block !important;}
     .answer{display:none !important;}
+    .cell{break-inside:avoid;page-break-inside:avoid;}
     @page{size:A4;margin:8mm;}
   }
   body.pdf-capturing{background:#fff;}
@@ -1288,14 +1289,15 @@ async function exportPDF(){
   try{
     const sheet=document.querySelector('.sheet');
     const scale=Math.min(2, window.devicePixelRatio||1.5);
-    const sheetRectBefore=sheet.getBoundingClientRect();
-    // record where each problem cell (and the footer) ends, in canvas pixel space,
-    // so page breaks can avoid ever cutting through the middle of one
-    const safeCutEls=[...document.querySelectorAll('#grid .cell'), document.querySelector('footer')].filter(Boolean);
-    const safeCutsPre=safeCutEls.map(el=>Math.round((el.getBoundingClientRect().bottom - sheetRectBefore.top) * scale));
 
     document.body.classList.add('pdf-capturing');
     await new Promise(r=>setTimeout(r,60));
+    // measure cell/footer positions AFTER 'pdf-capturing' is applied (it drops .wrap's
+    // max-width, which reflows the grid) so the safe cut points match what's actually captured
+    const sheetRectBefore=sheet.getBoundingClientRect();
+    const safeCutEls=[...document.querySelectorAll('#grid .cell'), document.querySelector('footer')].filter(Boolean);
+    const safeCutsPre=safeCutEls.map(el=>Math.round((el.getBoundingClientRect().bottom - sheetRectBefore.top) * scale));
+
     const canvas=await html2canvas(sheet, {scale, backgroundColor:'#FAF7EF', useCORS:true});
     document.body.classList.remove('pdf-capturing');
 
