@@ -1278,10 +1278,17 @@ async function exportPDF(){
   pdfBtn.textContent='📄 作成中…';
   showCopyStatus('PDFを作成しています…しばらくお待ちください。', false);
   try{
+    const sheet=document.querySelector('.sheet');
+    const scale=Math.min(2, window.devicePixelRatio||1.5);
+    const sheetRectBefore=sheet.getBoundingClientRect();
+    // record where each problem cell (and the footer) ends, in canvas pixel space,
+    // so page breaks can avoid ever cutting through the middle of one
+    const safeCutEls=[...document.querySelectorAll('#grid .cell'), document.querySelector('footer')].filter(Boolean);
+    const safeCutsPre=safeCutEls.map(el=>Math.round((el.getBoundingClientRect().bottom - sheetRectBefore.top) * scale));
+
     document.body.classList.add('pdf-capturing');
     await new Promise(r=>setTimeout(r,60));
-    const sheet=document.querySelector('.sheet');
-    const canvas=await html2canvas(sheet, {scale:Math.min(2, window.devicePixelRatio||1.5), backgroundColor:'#FAF7EF', useCORS:true});
+    const canvas=await html2canvas(sheet, {scale, backgroundColor:'#FAF7EF', useCORS:true});
     document.body.classList.remove('pdf-capturing');
 
     const { jsPDF }=window.jspdf;
@@ -1290,11 +1297,26 @@ async function exportPDF(){
     const pageH=pdf.internal.pageSize.getHeight();
     const ratio=pageW/canvas.width; // fit to page width; split height across multiple pages instead of shrinking
     const pageCanvasHeightPx=Math.floor(pageH/ratio);
-    const totalPages=Math.max(1, Math.ceil(canvas.height/pageCanvasHeightPx));
 
-    for(let i=0;i<totalPages;i++){
-      const sliceY=i*pageCanvasHeightPx;
-      const sliceH=Math.min(pageCanvasHeightPx, canvas.height-sliceY);
+    const safeCuts=[...new Set(safeCutsPre)].filter(y=>y>0 && y<canvas.height).sort((a,b)=>a-b);
+    safeCuts.push(canvas.height);
+
+    const pageRanges=[];
+    let currentY=0;
+    while(currentY<canvas.height){
+      const target=currentY+pageCanvasHeightPx;
+      let cut=null;
+      for(const c of safeCuts){
+        if(c>currentY && c<=target) cut=c;
+        if(c>target) break;
+      }
+      if(cut===null) cut=Math.min(target, canvas.height); // single cell taller than one page: fall back to a hard cut
+      pageRanges.push([currentY, cut]);
+      currentY=cut;
+    }
+
+    pageRanges.forEach(([sliceY, sliceEnd], i)=>{
+      const sliceH=sliceEnd-sliceY;
       const pageCanvas=document.createElement('canvas');
       pageCanvas.width=canvas.width;
       pageCanvas.height=sliceH;
@@ -1306,11 +1328,11 @@ async function exportPDF(){
       const imgH=sliceH*ratio;
       if(i>0) pdf.addPage();
       pdf.addImage(imgData,'JPEG',0,0,pageW,imgH);
-    }
+    });
 
     const dateStr=new Date().toISOString().slice(0,10);
     pdf.save(`math-drill-${dateStr}.pdf`);
-    showCopyStatus(totalPages>1 ? `PDFを保存しました（全${totalPages}ページ）。` : 'PDFを保存しました。', false);
+    showCopyStatus(pageRanges.length>1 ? `PDFを保存しました（全${pageRanges.length}ページ）。` : 'PDFを保存しました。', false);
   }catch(err){
     console.error(err);
     document.body.classList.remove('pdf-capturing');
