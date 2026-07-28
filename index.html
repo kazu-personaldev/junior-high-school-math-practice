@@ -131,6 +131,10 @@
     .toolbar,.panel,.topic-box{display:none;}
     .worklines{display:block !important;}
     .answer{display:none !important;}
+    /* break-inside:avoid is unreliable on CSS Grid children during print
+       pagination in many browsers, so drop to a single-column block layout
+       for print, where break-inside:avoid is well supported. */
+    #grid{display:block;}
     .cell{break-inside:avoid;page-break-inside:avoid;}
     @page{size:A4;margin:8mm;}
   }
