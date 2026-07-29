@@ -50,19 +50,24 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await geminiResp.json();
+    const rawText = await geminiResp.text();
+    let data = null;
+    try { data = JSON.parse(rawText); } catch (parseErr) { /* leave data null */ }
+
     if (!geminiResp.ok) {
-      res.status(502).json({ error: data?.error?.message || 'Gemini API error' });
+      console.error('Gemini API error', geminiResp.status, rawText);
+      res.status(502).json({ error: data?.error?.message || rawText || 'Gemini API error' });
       return;
     }
 
-    const text = (data.candidates || [])
+    const text = (data?.candidates || [])
       .flatMap(c => c.content?.parts || [])
       .map(p => p.text || '')
       .join('');
 
     res.status(200).json({ text });
   } catch (err) {
-    res.status(500).json({ error: 'リクエストに失敗しました。' });
+    console.error('generate-topic handler error', err);
+    res.status(500).json({ error: 'リクエストに失敗しました: ' + (err && err.message ? err.message : String(err)) });
   }
 }
