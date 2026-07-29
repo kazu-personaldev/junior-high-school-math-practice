@@ -138,13 +138,6 @@
     .cell{break-inside:avoid;page-break-inside:avoid;}
     @page{size:A4;margin:8mm;}
   }
-  body.pdf-capturing{background:#fff;}
-  body.pdf-capturing .wrap{max-width:none;}
-  body.pdf-capturing .sheet{box-shadow:none;border:none;}
-  body.pdf-capturing .toolbar,
-  body.pdf-capturing .panel,
-  body.pdf-capturing .topic-box,
-  body.pdf-capturing #copyStatus{display:none;}
   @media (max-width:700px){
     #grid{grid-template-columns:1fr;}
     .panel-body{grid-template-columns:1fr;}
@@ -212,7 +205,6 @@
     <button id="genBtn">🎲 問題を生成する</button>
     <button id="ansBtn" class="secondary" disabled>📝 解答・解説を見る</button>
     <div class="spacer"></div>
-    <button id="pdfBtn" class="ghost" disabled>📄 PDFで保存</button>
     <button id="printBtn" class="ghost" disabled>🖨 印刷する</button>
   </div>
   <div id="copyStatus" style="font-size:11.5px;color:var(--teal);min-height:14px;margin:-10px 0 10px;"></div>
@@ -228,8 +220,6 @@
 </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* ================= helpers ================= */
 function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
@@ -1189,7 +1179,6 @@ const grid=document.getElementById('grid');
 const genBtn=document.getElementById('genBtn');
 const ansBtn=document.getElementById('ansBtn');
 const printBtn=document.getElementById('printBtn');
-const pdfBtn=document.getElementById('pdfBtn');
 const topicBtn=document.getElementById('topicBtn');
 const topicInput=document.getElementById('topicInput');
 const topicStatus=document.getElementById('topicStatus');
@@ -1246,7 +1235,7 @@ function renderGrid(){
   document.getElementById('qcount').textContent=total;
   document.getElementById('qcount2').textContent=total;
   const hasProblems=total>0;
-  ansBtn.disabled=!hasProblems; printBtn.disabled=!hasProblems; pdfBtn.disabled=!hasProblems;
+  ansBtn.disabled=!hasProblems; printBtn.disabled=!hasProblems;
 }
 
 function generateSet(){
@@ -1280,83 +1269,6 @@ ansBtn.addEventListener('click', ()=>{
   ansBtn.textContent = show ? '🙈 解答・解説をかくす' : '📝 解答・解説を見る';
 });
 printBtn.addEventListener('click', ()=>window.print());
-
-async function exportPDF(){
-  if(typeof html2canvas==='undefined' || typeof window.jspdf==='undefined'){
-    showCopyStatus('PDF機能の読み込みに失敗しました。通信環境をご確認のうえ再読み込みするか、代わりに「🖨 印刷する」から「PDFに保存」をお試しください。', true);
-    return;
-  }
-  pdfBtn.disabled=true;
-  const originalLabel=pdfBtn.textContent;
-  pdfBtn.textContent='📄 作成中…';
-  showCopyStatus('PDFを作成しています…しばらくお待ちください。', false);
-  try{
-    const sheet=document.querySelector('.sheet');
-    const scale=Math.min(2, window.devicePixelRatio||1.5);
-
-    document.body.classList.add('pdf-capturing');
-    await new Promise(r=>setTimeout(r,60));
-    // measure cell/footer positions AFTER 'pdf-capturing' is applied (it drops .wrap's
-    // max-width, which reflows the grid) so the safe cut points match what's actually captured
-    const sheetRectBefore=sheet.getBoundingClientRect();
-    const safeCutEls=[...document.querySelectorAll('#grid .cell'), document.querySelector('footer')].filter(Boolean);
-    const safeCutsPre=safeCutEls.map(el=>Math.round((el.getBoundingClientRect().bottom - sheetRectBefore.top) * scale));
-
-    const canvas=await html2canvas(sheet, {scale, backgroundColor:'#FAF7EF', useCORS:true});
-    document.body.classList.remove('pdf-capturing');
-
-    const { jsPDF }=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-    const pageW=pdf.internal.pageSize.getWidth();
-    const pageH=pdf.internal.pageSize.getHeight();
-    const ratio=pageW/canvas.width; // fit to page width; split height across multiple pages instead of shrinking
-    const pageCanvasHeightPx=Math.floor(pageH/ratio);
-
-    const safeCuts=[...new Set(safeCutsPre)].filter(y=>y>0 && y<canvas.height).sort((a,b)=>a-b);
-    safeCuts.push(canvas.height);
-
-    const pageRanges=[];
-    let currentY=0;
-    while(currentY<canvas.height){
-      const target=currentY+pageCanvasHeightPx;
-      let cut=null;
-      for(const c of safeCuts){
-        if(c>currentY && c<=target) cut=c;
-        if(c>target) break;
-      }
-      if(cut===null) cut=Math.min(target, canvas.height); // single cell taller than one page: fall back to a hard cut
-      pageRanges.push([currentY, cut]);
-      currentY=cut;
-    }
-
-    pageRanges.forEach(([sliceY, sliceEnd], i)=>{
-      const sliceH=sliceEnd-sliceY;
-      const pageCanvas=document.createElement('canvas');
-      pageCanvas.width=canvas.width;
-      pageCanvas.height=sliceH;
-      const ctx=pageCanvas.getContext('2d');
-      ctx.fillStyle='#FAF7EF';
-      ctx.fillRect(0,0,pageCanvas.width,pageCanvas.height);
-      ctx.drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      const imgData=pageCanvas.toDataURL('image/jpeg', 0.92);
-      const imgH=sliceH*ratio;
-      if(i>0) pdf.addPage();
-      pdf.addImage(imgData,'JPEG',0,0,pageW,imgH);
-    });
-
-    const dateStr=new Date().toISOString().slice(0,10);
-    pdf.save(`math-drill-${dateStr}.pdf`);
-    showCopyStatus(pageRanges.length>1 ? `PDFを保存しました（全${pageRanges.length}ページ）。` : 'PDFを保存しました。', false);
-  }catch(err){
-    console.error(err);
-    document.body.classList.remove('pdf-capturing');
-    showCopyStatus('PDFの作成に失敗しました。「🖨 印刷する」から「PDFに保存」でも代用できます。', true);
-  }finally{
-    pdfBtn.disabled=false;
-    pdfBtn.textContent=originalLabel;
-  }
-}
-pdfBtn.addEventListener('click', exportPDF);
 
 function showCopyStatus(msg, isError){
   copyStatus.style.color = isError ? 'var(--red)' : 'var(--teal)';
