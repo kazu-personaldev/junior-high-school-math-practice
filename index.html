@@ -1275,7 +1275,7 @@ function showCopyStatus(msg, isError){
   copyStatus.textContent = msg;
 }
 
-/* ---------- custom topic via Anthropic API ---------- */
+/* ---------- custom topic via server-side Gemini API ---------- */
 topicBtn.addEventListener('click', async ()=>{
   const topic=topicInput.value.trim();
   if(!topic){ topicStatus.textContent='トピックを入力してください。'; topicStatus.style.color='var(--red)'; return; }
@@ -1283,31 +1283,14 @@ topicBtn.addEventListener('click', async ()=>{
   topicStatus.style.color='var(--teal)';
   topicStatus.textContent='問題を作成中…';
   try{
-    const prompt=`あなたは日本の中学数学の教師です。中学生（中1〜中3）の受験基礎トレーニング用に、次のトピックに関する基礎〜標準レベルの計算・文章題を${TOPIC_ADD_COUNT}問作成してください。
-トピック: 「${topic}」
-
-出力は必ず次のJSON配列の形式のみで、それ以外の文章（説明・前置き・コードブロックの記号）は一切含めないでください。
-[
-  {"q":"問題文", "a":"簡潔な答え", "e":"簡潔な解説（1〜2文）"},
-  ...
-]
-条件：
-- 問題文・答え・解説はすべて日本語。
-- 数式の累乗は x² のように上付き文字を使う。分数はできるだけ簡単な形（例: 3/4）で表す。
-- 中学生が自力で20分程度のドリルの一部として解けるレベルの難易度にする（難問すぎないこと）。
-- 改行が必要な場合は問題文中に \\n を使ってよい。
-- 必ずちょうど${TOPIC_ADD_COUNT}問作成すること。`;
-    const resp=await fetch('https://api.anthropic.com/v1/messages', {
+    const resp=await fetch('/api/generate-topic', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1200,
-        messages:[{role:'user', content:prompt}]
-      })
+      body:JSON.stringify({ topic })
     });
     const data=await resp.json();
-    const text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    if(!resp.ok) throw new Error(data.error||'request failed');
+    const text=data.text||'';
     let jsonText=text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
     const match=jsonText.match(/\[[\s\S]*\]/);
     if(match) jsonText=match[0];
