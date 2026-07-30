@@ -1184,11 +1184,14 @@ const topicInput=document.getElementById('topicInput');
 const topicStatus=document.getElementById('topicStatus');
 const copyStatus=document.getElementById('copyStatus');
 
-let currentProblems=[]; // {id, custom, tag, q, a, e, svg}
+let currentProblems=[]; // {id, custom, catId, tag, q, a, e, svg}
 let nextProblemId=1;
+let genToken=0;
 const TARGET=20;
 const TOPIC_ADD_COUNT=5;
 const STATE_KEY='mathDrillState';
+// カテゴリ単位で見て文章題・応用寄りの分野は、テンプレートで即表示したあとGeminiで作り直す
+const AI_CATEGORY_IDS=['hirei','ougi','kuukan','shiryo1','ichijikan','kakudo2','kakuritsu2','yax2','souji','enshuu','sanheihou','hyouhon'];
 
 function saveState(){
   try{ localStorage.setItem(STATE_KEY, JSON.stringify({currentProblems, nextProblemId})); }catch(e){}
@@ -1255,12 +1258,58 @@ function generateSet(){
 
   currentProblems = queue.map(cat=>{
     const p=pickVariant(cat);
-    return {id:nextProblemId++, custom:false, tag:`${cat.grade}・${cat.label}`, q:p.q, a:p.a, e:p.e, svg:p.svg||''};
+    return {id:nextProblemId++, custom:false, catId:cat.id, catGrade:cat.grade, catLabel:cat.label, tag:`${cat.grade}・${cat.label}`, q:p.q, a:p.a, e:p.e, svg:p.svg||''};
   });
   renderGrid();
   saveState();
+  enhanceAIProblems(++genToken);
 }
 genBtn.addEventListener('click', generateSet);
+
+/* ---------- quietly upgrade word-problem-leaning categories with Gemini ---------- */
+async function enhanceAIProblems(token){
+  const targets=currentProblems
+    .map((p,i)=>({p,i}))
+    .filter(({p})=>!p.custom && AI_CATEGORY_IDS.includes(p.catId));
+  if(targets.length===0) return;
+
+  copyStatus.style.color='var(--teal)';
+  copyStatus.textContent='一部の問題をAIで作成中…';
+  try{
+    const items=targets.map(({p})=>({grade:p.catGrade, label:p.catLabel}));
+    const resp=await fetch('/api/generate-variety', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ items })
+    });
+    const data=await resp.json();
+    if(!resp.ok) throw new Error(data.error||'request failed');
+    if(token!==genToken) return; // a newer generateSet() has already started
+
+    const text=data.text||'';
+    let jsonText=text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+    const match=jsonText.match(/\[[\s\S]*\]/);
+    if(match) jsonText=match[0];
+    const results=JSON.parse(jsonText);
+    if(!Array.isArray(results)) throw new Error('empty');
+
+    results.forEach((r,idx)=>{
+      const target=targets[idx];
+      if(!target || !r) return;
+      const q=(r.q||'').toString(), a=(r.a||'').toString(), e=(r.e||'').toString();
+      if(!q || !a) return; // keep the template fallback already shown
+      currentProblems[target.i]={...currentProblems[target.i], q, a, e, svg:''};
+    });
+
+    if(token!==genToken) return;
+    renderGrid();
+    saveState();
+    copyStatus.textContent='';
+  }catch(err){
+    console.error(err);
+    if(token===genToken) copyStatus.textContent='';
+  }
+}
 
 ansBtn.addEventListener('click', ()=>{
   const show=!grid.classList.contains('show-answers');
@@ -1324,7 +1373,7 @@ topicBtn.addEventListener('click', async ()=>{
         pool=pool.slice(0,need);
         const filler=pool.map(cat=>{
           const p=pickVariant(cat);
-          return {id:nextProblemId++, custom:false, tag:`${cat.grade}・${cat.label}`, q:p.q, a:p.a, e:p.e, svg:p.svg||''};
+          return {id:nextProblemId++, custom:false, catId:cat.id, catGrade:cat.grade, catLabel:cat.label, tag:`${cat.grade}・${cat.label}`, q:p.q, a:p.a, e:p.e, svg:p.svg||''};
         });
         currentProblems=currentProblems.concat(filler);
       }
@@ -1334,6 +1383,7 @@ topicBtn.addEventListener('click', async ()=>{
 
     renderGrid();
     saveState();
+    enhanceAIProblems(++genToken);
     topicStatus.style.color='var(--teal)';
     topicStatus.textContent=`「${topic}」の問題を${newEntries.length}問追加しました（既存の問題を${removeIdx.length}問減らして、全体は${currentProblems.length}問です）。`;
   }catch(err){
