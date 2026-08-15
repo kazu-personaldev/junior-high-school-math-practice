@@ -108,7 +108,7 @@
   .spacer{flex:1;}
 
   #grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--paper-line);border-left:1px solid var(--paper-line);}
-  .cell{border-right:1px solid var(--paper-line);border-bottom:1px solid var(--paper-line);padding:10px 14px 12px;min-height:78px;}
+  .cell{border-right:1px solid var(--paper-line);border-bottom:1px solid var(--paper-line);padding:10px 14px 12px;min-height:110px;}
   .cell.custom{background:#fbf6ee;}
   .num{font-weight:700;color:var(--teal);font-size:12px;margin-right:4px;}
   .qtag{font-size:9.5px;color:var(--ink-soft);border:1px solid var(--paper-line);border-radius:9px;padding:1px 7px;margin-left:6px;}
@@ -117,7 +117,7 @@
   .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;text-align:center;margin:0 1px;font-size:0.86em;line-height:1.15;position:relative;top:0.05em;}
   .frac .fnum{border-bottom:1.2px solid currentColor;padding:0 3px 1px;}
   .frac .fden{padding:1px 3px 0;}
-  .worklines{height:20px;border-bottom:1px dotted var(--paper-line);margin-bottom:4px;}
+  .worklines{height:32px;border-bottom:1px dotted var(--paper-line);margin-bottom:4px;}
   .answer{display:none;margin-top:6px;padding:7px 10px;background:var(--red-soft);border-left:3px solid var(--red);font-size:12.5px;line-height:1.6;color:#4a2c22;}
   .answer b{color:var(--red);font-size:13.5px;}
   #grid.show-answers .answer{display:block;}
@@ -129,13 +129,19 @@
     body{background:#fff;padding:0;}
     .sheet{box-shadow:none;border:none;max-width:100%;padding:8mm 10mm;}
     .toolbar,.panel,.topic-box{display:none;}
-    .worklines{display:block !important;}
+    .worklines{display:block !important;height:18mm;margin-bottom:5mm;}
     .answer{display:none !important;}
     /* break-inside:avoid is unreliable on CSS Grid children during print
        pagination in many browsers, so drop to a single-column block layout
        for print, where break-inside:avoid is well supported. */
     #grid{display:block;}
-    .cell{break-inside:avoid;page-break-inside:avoid;}
+    .cell{
+      break-inside:avoid;page-break-inside:avoid;
+      min-height:70mm;padding:6mm 7mm;box-sizing:border-box;
+    }
+    /* shrink diagrams a bit in print so there's still room left for worklines */
+    #grid svg{max-width:160px !important;}
+    .qtext{font-size:16px;}
     @page{size:A4;margin:8mm;}
   }
   @media (max-width:700px){
@@ -474,6 +480,158 @@ function makeGraph(xmin,xmax,ymin,ymax,opts){
   });
   return svgTag(W,H,s);
 }
+/* --- 円・おうぎ形 --- */
+function drawCircleWithRadius(rLabel){
+  const O=[100,100], rad=70;
+  let s='';
+  s+=circEl(O[0],O[1],rad,{});
+  s+=lineEl(O[0],O[1],O[0]+rad,O[1],{color:RED});
+  s+=dotEl(O[0],O[1]);
+  s+=txt(O[0],O[1]+4,'O',{size:11});
+  s+=txt(O[0]+rad/2,O[1]-8,`${rLabel}`,{size:12,color:RED});
+  return svgTag(200,200,s);
+}
+function sectorArcPath(O,rad,th){
+  const steps=24; let d=`M${O[0]},${O[1]}`;
+  for(let i=0;i<=steps;i++){
+    const ang=-(th*i/steps)*Math.PI/180;
+    d+=` L${(O[0]+rad*Math.cos(ang)).toFixed(1)},${(O[1]+rad*Math.sin(ang)).toFixed(1)}`;
+  }
+  return d;
+}
+function drawSector(rLabel,th){
+  const O=[100,150], rad=95;
+  let s=`<path d="${sectorArcPath(O,rad,th)} Z" fill="${FILL}" fill-opacity="0.6" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  s+=dotEl(O[0],O[1]);
+  s+=txt(O[0]-4,O[1]+16,'O',{size:11});
+  const midAng=-(th/2)*Math.PI/180, labelR=rad*0.55;
+  s+=txt(O[0]+labelR*Math.cos(midAng),O[1]+labelR*Math.sin(midAng),`${th}°`,{size:11});
+  s+=txt(O[0]+rad*0.55,O[1]-8,`${rLabel}`,{size:12,color:RED});
+  return svgTag(220,200,s);
+}
+function drawSectorRing(RLabel,rLabel,th){
+  const O=[100,150], radOuter=95, radInner=55;
+  const inner=[]; const steps=24;
+  for(let i=steps;i>=0;i--){
+    const ang=-(th*i/steps)*Math.PI/180;
+    inner.push(`L${(O[0]+radInner*Math.cos(ang)).toFixed(1)},${(O[1]+radInner*Math.sin(ang)).toFixed(1)}`);
+  }
+  const d=`${sectorArcPath(O,radOuter,th)} ${inner.join(' ')} Z`;
+  let s=`<path d="${d}" fill="${FILL}" fill-opacity="0.6" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  s+=dotEl(O[0],O[1]);
+  s+=txt(O[0]-4,O[1]+16,'O',{size:11});
+  s+=txt(O[0]+radOuter*0.55,O[1]-10,`${RLabel}`,{size:11,color:RED});
+  s+=txt(O[0]+radInner*0.55,O[1]+16,`${rLabel}`,{size:11,color:INK});
+  return svgTag(220,200,s);
+}
+function drawSemicircleSquare(rLabel){
+  const x0=40,y0=40,side=120,cx=x0+side/2,cy=y0;
+  let s=`<rect x="${x0}" y="${y0}" width="${side}" height="${side}" fill="none" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<path d="M${x0},${y0} A${side/2},${side/2} 0 0 1 ${x0+side},${y0}" fill="${FILL}" fill-opacity="0.5" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=lineEl(cx,cy,cx,cy-side/2,{color:RED,dash:'3,2'});
+  s+=txt(cx+16,cy-side/4,`${rLabel}`,{size:11,color:RED});
+  return svgTag(200,190,s);
+}
+/* --- 空間図形 --- */
+function drawRectPrism(wLabel,lLabel,hLabel){
+  const x0=40,y0=120,w=90,h=90,dx=40,dy=-24;
+  const A=[x0,y0],B=[x0+w,y0],C=[x0+w,y0-h],D=[x0,y0-h];
+  const D2=[D[0]+dx,D[1]+dy],C2=[C[0]+dx,C[1]+dy],B2=[B[0]+dx,B[1]+dy];
+  let s=`<polygon points="${A.join(',')} ${B.join(',')} ${C.join(',')} ${D.join(',')}" fill="${FILL}" fill-opacity="0.35" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${D.join(',')} ${C.join(',')} ${C2.join(',')} ${D2.join(',')}" fill="${FILL}" fill-opacity="0.55" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${B.join(',')} ${C.join(',')} ${C2.join(',')} ${B2.join(',')}" fill="${FILL}" fill-opacity="0.2" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=txt((A[0]+B[0])/2,A[1]+16,`${wLabel}`,{size:11});
+  s+=txt(A[0]-10,(A[1]+D[1])/2,`${hLabel}`,{size:11});
+  s+=txt((D[0]+D2[0])/2-6,(D[1]+D2[1])/2-4,`${lLabel}`,{size:11});
+  return svgTag(200,190,s);
+}
+function drawCylinder(rLabel,hLabel){
+  const cx=100,topY=45,botY=155,rx=55,ry=16;
+  let s=`<ellipse cx="${cx}" cy="${topY}" rx="${rx}" ry="${ry}" fill="${FILL}" fill-opacity="0.5" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=lineEl(cx-rx,topY,cx-rx,botY,{});
+  s+=lineEl(cx+rx,topY,cx+rx,botY,{});
+  s+=`<path d="M${cx-rx},${botY} A${rx},${ry} 0 0 0 ${cx+rx},${botY}" fill="none" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=lineEl(cx,topY,cx+rx,topY,{color:RED,dash:'3,2'});
+  s+=txt(cx+rx/2,topY-8,`${rLabel}`,{size:11,color:RED});
+  s+=txt(cx+rx+16,(topY+botY)/2,`${hLabel}`,{size:11});
+  return svgTag(200,190,s);
+}
+function drawSphere(rLabel){
+  const O=[100,100], rad=70;
+  let s=circEl(O[0],O[1],rad,{});
+  s+=`<ellipse cx="${O[0]}" cy="${O[1]}" rx="${rad}" ry="${rad*0.32}" fill="none" stroke="${SOFT}" stroke-width="1.2" stroke-dasharray="3,2"/>`;
+  s+=lineEl(O[0],O[1],O[0]+rad,O[1],{color:RED});
+  s+=dotEl(O[0],O[1]);
+  s+=txt(O[0],O[1]+4,'O',{size:11});
+  s+=txt(O[0]+rad/2,O[1]-8,`${rLabel}`,{size:12,color:RED});
+  return svgTag(200,200,s);
+}
+function drawPrismWithHole(aLabel,hLabel,rLabel){
+  const x0=40,y0=110,w=90,h=90,dx=40,dy=-24;
+  const A=[x0,y0],B=[x0+w,y0],C=[x0+w,y0-h],D=[x0,y0-h];
+  const D2=[D[0]+dx,D[1]+dy],C2=[C[0]+dx,C[1]+dy],B2=[B[0]+dx,B[1]+dy];
+  let s=`<polygon points="${A.join(',')} ${B.join(',')} ${C.join(',')} ${D.join(',')}" fill="${FILL}" fill-opacity="0.35" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${D.join(',')} ${C.join(',')} ${C2.join(',')} ${D2.join(',')}" fill="${FILL}" fill-opacity="0.55" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${B.join(',')} ${C.join(',')} ${C2.join(',')} ${B2.join(',')}" fill="${FILL}" fill-opacity="0.2" stroke="${INK}" stroke-width="1.6"/>`;
+  const topCx=(D[0]+C[0]+C2[0]+D2[0])/4, topCy=(D[1]+C[1]+C2[1]+D2[1])/4;
+  s+=`<ellipse cx="${topCx}" cy="${topCy}" rx="18" ry="9" fill="#fff" stroke="${RED}" stroke-width="1.6"/>`;
+  s+=txt((A[0]+B[0])/2,A[1]+16,`${aLabel}`,{size:11});
+  s+=txt(A[0]-10,(A[1]+D[1])/2,`${hLabel}`,{size:11});
+  s+=txt(topCx+22,topCy,`${rLabel}`,{size:11,color:RED});
+  return svgTag(200,180,s);
+}
+function drawWaterTank(aLabel,h1Label,h2Label){
+  const x0=50,x1=170,yTop=30,yBot=170;
+  const waterY=yBot-(yBot-yTop)*0.45;
+  let s=`<rect x="${x0}" y="${yTop}" width="${x1-x0}" height="${yBot-yTop}" fill="none" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<rect x="${x0}" y="${waterY}" width="${x1-x0}" height="${yBot-waterY}" fill="${FILL}" fill-opacity="0.5" stroke="none"/>`;
+  s+=lineEl(x0,waterY,x1,waterY,{color:TEAL,dash:'3,2'});
+  s+=txt(x1+8,waterY+4,`${h1Label}`,{size:11,color:TEAL,anchor:'start'});
+  s+=lineEl(x0,yTop+18,x1,yTop+18,{color:RED,dash:'2,2'});
+  s+=txt(x1+8,yTop+22,`${h2Label}`,{size:11,color:RED,anchor:'start'});
+  s+=txt((x0+x1)/2,yBot+16,`${aLabel}`,{size:11});
+  return svgTag(230,200,s);
+}
+/* --- 多角形の角度 --- */
+function drawRegularPolygon(n,highlightOneAngle){
+  const O=[100,100], rad=75, pts=[];
+  for(let i=0;i<n;i++){ const ang=-Math.PI/2+i*2*Math.PI/n; pts.push([O[0]+rad*Math.cos(ang),O[1]+rad*Math.sin(ang)]); }
+  let s=`<polygon points="${pts.map(p=>p.join(',')).join(' ')}" fill="${FILL}" fill-opacity="0.35" stroke="${INK}" stroke-width="1.6"/>`;
+  if(highlightOneAngle){
+    s+=`<circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="10" fill="none" stroke="${RED}" stroke-width="1.4"/>`;
+    s+=dotEl(pts[0][0],pts[0][1]);
+  }
+  s+=txt(O[0],O[1]+4,`${n}角形`,{size:12,color:SOFT});
+  return svgTag(200,200,s);
+}
+function drawZigzagParallel(aLabel,bLabel){
+  let s=lineEl(15,50,215,50,{});
+  s+=lineEl(15,170,215,170,{});
+  s+=txt(20,44,'ℓ',{size:11,color:SOFT}); s+=txt(20,164,'m',{size:11,color:SOFT});
+  const A=[60,50],C=[130,110],B=[170,170];
+  s+=lineEl(A[0],A[1],C[0],C[1],{color:RED}); s+=lineEl(C[0],C[1],B[0],B[1],{color:RED});
+  [A,C,B].forEach(p=>s+=dotEl(p[0],p[1]));
+  s+=txt(A[0],A[1]+16,'A',{size:11}); s+=txt(C[0]+12,C[1],'C',{size:11}); s+=txt(B[0],B[1]-10,'B',{size:11});
+  s+=txt(A[0]+20,A[1]+20,`${aLabel}`,{size:11});
+  s+=txt(B[0]-20,B[1]-16,`${bLabel}`,{size:11});
+  s+=txt(C[0]+14,C[1]+18,'?',{size:13,color:RED});
+  return svgTag(230,190,s);
+}
+/* --- 直方体の対角線 --- */
+function drawBox3D(aLabel,bLabel,cLabel){
+  const x0=40,y0=140,w=100,h=70,dx=45,dy=-30;
+  const A=[x0,y0],B=[x0+w,y0],C=[x0+w,y0-h],D=[x0,y0-h];
+  const D2=[D[0]+dx,D[1]+dy],C2=[C[0]+dx,C[1]+dy],B2=[B[0]+dx,B[1]+dy];
+  let s=`<polygon points="${A.join(',')} ${B.join(',')} ${C.join(',')} ${D.join(',')}" fill="${FILL}" fill-opacity="0.3" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${D.join(',')} ${C.join(',')} ${C2.join(',')} ${D2.join(',')}" fill="${FILL}" fill-opacity="0.5" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=`<polygon points="${B.join(',')} ${C.join(',')} ${C2.join(',')} ${B2.join(',')}" fill="${FILL}" fill-opacity="0.15" stroke="${INK}" stroke-width="1.6"/>`;
+  s+=lineEl(A[0],A[1],C2[0],C2[1],{color:RED,dash:'3,2'});
+  s+=txt((A[0]+B[0])/2,A[1]+16,`${aLabel}`,{size:11});
+  s+=txt(A[0]-10,(A[1]+D[1])/2,`${cLabel}`,{size:11});
+  s+=txt((D[0]+D2[0])/2-6,(D[1]+D2[1])/2-4,`${bLabel}`,{size:11});
+  s+=txt((A[0]+C2[0])/2+12,(A[1]+C2[1])/2,'?',{size:13,color:RED});
+  return svgTag(210,190,s);
+}
 
 /* ================= category data =================
    Each category: {id, grade:'中1'|'中2'|'中3', label, variants:[fn,...]}
@@ -650,50 +808,55 @@ CATS.push({id:'hirei', grade:'中1', label:'比例・反比例・比例式', var
   }
 ]});
 CATS.push({id:'ougi', grade:'中1', label:'円・おうぎ形の面積と弧の長さ', variants:[
-  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の面積を求めなさい。`, a:`${r*r}π cm²`, e:`面積=πr²=π×${r}²=${r*r}π cm²`}; },
-  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の周の長さを求めなさい。`, a:`${2*r}π cm`, e:`周の長さ=2πr=2π×${r}=${2*r}π cm`}; },
+  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の面積を求めなさい。`, a:`${r*r}π cm²`, e:`面積=πr²=π×${r}²=${r*r}π cm²`, svg:drawCircleWithRadius(`${r}cm`)}; },
+  ()=>{ const r=randInt(2,9); return {q:`半径${r}cmの円の周の長さを求めなさい。`, a:`${2*r}π cm`, e:`周の長さ=2πr=2π×${r}=${2*r}π cm`, svg:drawCircleWithRadius(`${r}cm`)}; },
   ()=>{
     const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
     return {q:`半径${r}cm、中心角${th}°のおうぎ形の弧の長さを求めなさい。`, a:`${fracStr(2*r*th,360)}π cm`,
-      e:`弧の長さ=2πr×(中心角/360)=2π×${r}×${fracHTML(th,360)} = ${fracStr(2*r*th,360)}π cm`};
+      e:`弧の長さ=2πr×(中心角/360)=2π×${r}×${fracHTML(th,360)} = ${fracStr(2*r*th,360)}π cm`,
+      svg:drawSector(`${r}cm`,th)};
   },
   ()=>{
     const r=randInt(2,12), th=choice([30,45,60,90,120,135,150,180]);
     return {q:`半径${r}cm、中心角${th}°のおうぎ形の面積を求めなさい。`, a:`${fracStr(r*r*th,360)}π cm²`,
-      e:`面積=πr²×(中心角/360)=π×${r}²×${fracHTML(th,360)} = ${fracStr(r*r*th,360)}π cm²`};
+      e:`面積=πr²×(中心角/360)=π×${r}²×${fracHTML(th,360)} = ${fracStr(r*r*th,360)}π cm²`,
+      svg:drawSector(`${r}cm`,th)};
   },
   ()=>{ // 応用：同心の2つのおうぎ形にはさまれた部分の面積
     const th=choice([30,45,60,90,120,150,180]);
     const r=randInt(2,7), R=r+randInt(2,6);
     return {q:`中心角が共通で${th}°、半径が${R}cmと${r}cm(${R}cm > ${r}cm)の2つのおうぎ形がある。この2つの弧の間にはさまれた部分の面積を求めなさい。`,
       a:`${fracStr((R*R-r*r)*th,360)}π cm²`,
-      e:`大きいおうぎ形−小さいおうぎ形＝π×(${R}²−${r}²)×${fracHTML(th,360)} = ${fracStr((R*R-r*r)*th,360)}π cm²`};
+      e:`大きいおうぎ形−小さいおうぎ形＝π×(${R}²−${r}²)×${fracHTML(th,360)} = ${fracStr((R*R-r*r)*th,360)}π cm²`,
+      svg:drawSectorRing(`${R}cm`,`${r}cm`,th)};
   },
   ()=>{ // 難関：半円と正方形を組み合わせた複合図形の周の長さ
     const r=randInt(2,9); const side=2*r;
     return {q:`半径${r}cmの半円と、その直径を1辺とする正方形を組み合わせた図形がある(半円は正方形の外側にある)。この図形のまわりの長さを求めなさい。`,
       a:`(${3*side} + ${r}π) cm`,
-      e:`正方形の3辺分（直径の辺は内側になるため除く）＝${side}×3=${3*side}cm。半円の弧＝πr=${r}πcm。まわりの長さ＝${3*side}+${r}πcm`};
+      e:`正方形の3辺分（直径の辺は内側になるため除く）＝${side}×3=${3*side}cm。半円の弧＝πr=${r}πcm。まわりの長さ＝${3*side}+${r}πcm`,
+      svg:drawSemicircleSquare(`${r}cm`)};
   }
 ]});
 CATS.push({id:'kuukan', grade:'中1', label:'空間図形（角柱・円柱・球の体積と表面積）', variants:[
   ()=>{ const w=randInt(2,9), l=randInt(2,9), h=randInt(2,9);
     return {q:`底面が縦${w}cm、横${l}cmの長方形で、高さ${h}cmの四角柱の体積を求めなさい。`, a:`${w*l*h} cm³`,
-      e:`体積=底面積×高さ=(${w}×${l})×${h}=${w*l*h} cm³`}; },
+      e:`体積=底面積×高さ=(${w}×${l})×${h}=${w*l*h} cm³`, svg:drawRectPrism(`${w}cm`,`${l}cm`,`${h}cm`)}; },
   ()=>{ const r=randInt(2,8), h=randInt(2,9);
     const s=2*r*r+2*r*h;
     return {q:`底面の半径${r}cm、高さ${h}cmの円柱の表面積を求めなさい。`, a:`${s}π cm²`,
-      e:`表面積=2πr²+2πrh=2π×${r}²+2π×${r}×${h}=${2*r*r}π+${2*r*h}π=${s}π cm²`}; },
+      e:`表面積=2πr²+2πrh=2π×${r}²+2π×${r}×${h}=${2*r*r}π+${2*r*h}π=${s}π cm²`, svg:drawCylinder(`${r}cm`,`${h}cm`)}; },
   ()=>{ const r=choice([3,6,9]);
     return {q:`半径${r}cmの球の体積を求めなさい。`, a:`${4*r*r*r/3}π cm³`,
-      e:`体積=(4/3)πr³=(4/3)π×${r}³=${4*r*r*r/3}π cm³`}; },
+      e:`体積=(4/3)πr³=(4/3)π×${r}³=${4*r*r*r/3}π cm³`, svg:drawSphere(`${r}cm`)}; },
   ()=>{ const r=choice([2,3,4,5,6,7]);
-    return {q:`半径${r}cmの球の表面積を求めなさい。`, a:`${4*r*r}π cm²`, e:`表面積=4πr²=4π×${r}²=${4*r*r}π cm²`}; },
+    return {q:`半径${r}cmの球の表面積を求めなさい。`, a:`${4*r*r}π cm²`, e:`表面積=4πr²=4π×${r}²=${4*r*r}π cm²`, svg:drawSphere(`${r}cm`)}; },
   ()=>{ // 応用：直方体から円柱をくりぬいた体積
     const a=randInt(4,9), h=randInt(3,8), r=randInt(1,Math.max(1,Math.floor(a/2)));
     return {q:`底面が1辺${a}cmの正方形で高さ${h}cmの直方体から、底面の半径${r}cm、高さ${h}cmの円柱をくりぬいた。残りの立体の体積を求めなさい。`,
       a:`(${a*a*h} − ${r*r*h}π) cm³`,
-      e:`直方体の体積=${a}×${a}×${h}=${a*a*h}cm³。円柱の体積=π×${r}²×${h}=${r*r*h}π cm³。差は (${a*a*h} − ${r*r*h}π) cm³`};
+      e:`直方体の体積=${a}×${a}×${h}=${a*a*h}cm³。円柱の体積=π×${r}²×${h}=${r*r*h}π cm³。差は (${a*a*h} − ${r*r*h}π) cm³`,
+      svg:drawPrismWithHole(`${a}cm`,`${h}cm`,`${r}cm`)};
   },
   ()=>{ // 難関：水そうの水位変化（文章題）
     const a=randInt(3,8), h1=randInt(2,10), deltaH=randInt(2,9);
@@ -703,7 +866,8 @@ CATS.push({id:'kuukan', grade:'中1', label:'空間図形（角柱・円柱・�
     const rate=volNeeded/time;
     return {q:`底面が1辺${a}cmの正方形である直方体の水そうに、深さ${h1}cmまで水が入っている。この水そうに毎分${rate}cm³ずつ水を入れるとき、水の深さが${h2}cmになるまでに何分かかるか求めなさい。`,
       a:`${time}分`,
-      e:`増やす水の体積=${a}×${a}×(${h2}−${h1})=${volNeeded}cm³。時間=${volNeeded}÷${rate}=${time}分`};
+      e:`増やす水の体積=${a}×${a}×(${h2}−${h1})=${volNeeded}cm³。時間=${volNeeded}÷${rate}=${time}分`,
+      svg:drawWaterTank(`${a}cm`,`${h1}cm`,`${h2}cm`)};
   }
 ]});
 CATS.push({id:'shiryo1', grade:'中1', label:'資料の整理（代表値・相対度数）', variants:[
@@ -882,8 +1046,8 @@ CATS.push({id:'ichijikan', grade:'中2', label:'一次関数（式・変域）',
   }
 ]});
 CATS.push({id:'kakudo2', grade:'中2', label:'角度（多角形・平行線・外角）', variants:[
-  ()=>{ const n=choice([5,6,7,8,9]); return {q:`${n}角形の内角の和を求めなさい。`, a:`${(n-2)*180}°`, e:`内角の和=180×(n−2)=180×${n-2}=${(n-2)*180}°`}; },
-  ()=>{ const n=choice([5,6,8,9,10,12]); return {q:`正${n}角形の1つの内角の大きさを求めなさい。`, a:`${(n-2)*180/n}°`, e:`1つの内角=180×(${n}−2)÷${n}=${(n-2)*180/n}°`}; },
+  ()=>{ const n=choice([5,6,7,8,9]); return {q:`${n}角形の内角の和を求めなさい。`, a:`${(n-2)*180}°`, e:`内角の和=180×(n−2)=180×${n-2}=${(n-2)*180}°`, svg:drawRegularPolygon(n,false)}; },
+  ()=>{ const n=choice([5,6,8,9,10,12]); return {q:`正${n}角形の1つの内角の大きさを求めなさい。`, a:`${(n-2)*180/n}°`, e:`1つの内角=180×(${n}−2)÷${n}=${(n-2)*180/n}°`, svg:drawRegularPolygon(n,true)}; },
   ()=>{ const a=randInt(20,85), b=randInt(20,85);
     return {q:`三角形の2つの内角がそれぞれ${a}°、${b}°であるとき、この2つに隣り合わない外角の大きさを求めなさい。`,
       a:`${a+b}°`, e:`三角形の外角は、隣り合わない2つの内角の和に等しいので ${a}+${b}=${a+b}°`,
@@ -896,7 +1060,8 @@ CATS.push({id:'kakudo2', grade:'中2', label:'角度（多角形・平行線・�
     const a=randInt(20,90), b=randInt(20,90);
     return {q:`2直線ℓ、mは平行である。ℓ上の点Aとm上の点Bを、途中で折れ曲がる点Cで結んだ折れ線ACBがある。∠A=${a}°、∠B=${b}°のとき、Cを通りℓ,mに平行な補助線を利用して∠ACBの大きさを求めなさい。`,
       a:`${a+b}°`,
-      e:`点Cを通り、ℓ,mに平行な補助線を引くと、錯角の関係により∠ACBはちょうど∠Aと∠Bに分かれる。よって ∠ACB=∠A+∠B=${a}+${b}=${a+b}°`};
+      e:`点Cを通り、ℓ,mに平行な補助線を引くと、錯角の関係により∠ACBはちょうど∠Aと∠Bに分かれる。よって ∠ACB=∠A+∠B=${a}+${b}=${a+b}°`,
+      svg:drawZigzagParallel(`${a}°`,`${b}°`)};
   }
 ]});
 CATS.push({id:'kakuritsu2', grade:'中2', label:'確率', variants:[
@@ -1088,7 +1253,8 @@ CATS.push({id:'souji', grade:'中3', label:'相似な図形', variants:[
   ()=>{ const [m,n]=choice([[2,3],[3,4],[2,5],[3,5],[4,5]]); const u=randInt(1,6);
     const areaP=m*m*u, areaQ=n*n*u;
     return {q:`相似な2つの図形PとQの相似比が${m}:${n}である。Pの面積が${areaP}cm²のとき、Qの面積を求めなさい。`,
-      a:`${areaQ}cm²`, e:`面積比は相似比の2乗：${m}²:${n}²=${m*m}:${n*n}。${areaP}×${fracHTML(n*n,m*m)}=${areaQ}cm²`}; },
+      a:`${areaQ}cm²`, e:`面積比は相似比の2乗：${m}²:${n}²=${m*m}:${n*n}。${areaP}×${fracHTML(n*n,m*m)}=${areaQ}cm²`,
+      svg:drawSimilarTriangles(`面積${areaP}cm²`,'面積?')}; },
   ()=>{ // 応用：中点連結定理
     const bc=randInt(2,15)*2;
     return {q:`△ABCの辺AB、ACの中点をそれぞれM、Nとする。BC=${bc}cmのとき、MNの長さを求めなさい。`,
@@ -1134,7 +1300,8 @@ CATS.push({id:'sanheihou', grade:'中3', label:'三平方の定理', variants:[
     const list=[[1,2,2,3],[2,3,6,7],[3,4,12,13],[4,4,7,9],[2,6,9,11],[6,6,7,11],[1,4,8,9],[2,10,11,15]];
     const [a,b,c,d]=choice(list);
     return {q:`縦${a}cm、横${b}cm、高さ${c}cmの直方体の対角線の長さを求めなさい。`, a:`${d}cm`,
-      e:`対角線²=${a}²+${b}²+${c}²=${a*a}+${b*b}+${c*c}=${d*d} → 対角線=${d}cm`};
+      e:`対角線²=${a}²+${b}²+${c}²=${a*a}+${b*b}+${c*c}=${d*d} → 対角線=${d}cm`,
+      svg:drawBox3D(`${a}cm`,`${b}cm`,`${c}cm`)};
   }
 ]});
 CATS.push({id:'hyouhon', grade:'中3', label:'標本調査（推定の計算）', variants:[
@@ -1191,7 +1358,9 @@ const TARGET=20;
 const TOPIC_ADD_COUNT=5;
 const STATE_KEY='mathDrillState';
 // カテゴリ単位で見て文章題・応用寄りの分野は、テンプレートで即表示したあとGeminiで作り直す
-const AI_CATEGORY_IDS=['hirei','ougi','kuukan','shiryo1','ichijikan','kakudo2','kakuritsu2','yax2','souji','enshuu','sanheihou','hyouhon'];
+// 図が必須の図形分野(おうぎ形・空間図形・角度・相似・円周角・三平方)はAIが図を描けないため対象外にし、
+// 図つきテンプレートのまま出題する
+const AI_CATEGORY_IDS=['hirei','shiryo1','ichijikan','kakuritsu2','yax2','hyouhon'];
 
 function saveState(){
   try{ localStorage.setItem(STATE_KEY, JSON.stringify({currentProblems, nextProblemId})); }catch(e){}
